@@ -163,7 +163,6 @@ def handle_request(c):
             A_peak_widths = peak_widths(A_clipped, A_peaks, rel_height=0.01)
             A_pk_prominences = peak_prominences(A_clipped, A_peaks)[0]
             A_valley_widths = peak_widths(A_flipped, A_valleys, rel_height=0.01)
-            A_valley_widths.resize(np.shape(A_peak_widths))
             A_nr_peaks = len(A_peaks)
 
             B_peaks, _ = find_peaks(B_clipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
@@ -171,7 +170,6 @@ def handle_request(c):
             B_peak_widths = peak_widths(B_clipped, B_peaks, rel_height=0.01)
             B_pk_prominences = peak_prominences(B_clipped, B_peaks)[0]
             B_valley_widths = peak_widths(B_flipped, B_valleys, rel_height=0.01)
-            B_valley_widths.resize(np.shape(B_peak_widths))
             B_nr_peaks = len(B_peaks)
 
             print('Nr. of peaks A: {}'.format(len(A_peaks)))
