@@ -542,7 +542,7 @@ picoDevice = StreamingDevice(samples, sample_interval, potential_range=ps2000.PS
 bind_ip = "0.0.0.0" 
 bind_port = 8000
 server = socket.create_server((bind_ip, bind_port))
-c_sock = socket(family=-1, type=-1, proto=-1)
+c_sock = socket.socket(family=-1, type=-1, proto=-1)
 
 # we tell the server to start listening with a maximum backlog of connections set to 5
 server.listen(5) 
