@@ -497,6 +497,8 @@ samples = seconds_to_samples(time_interval, sample_interval) # how many samples 
 pretrigger = seconds_to_samples(0.5 * expected_period)
 
 
+# Start device
+picoDevice = StreamingDevice(samples, sample_interval, potential_range=ps2000.PS2000_VOLTAGE_RANGE['PS2000_20V'], pretrigger=pretrigger)
 
 # Setup server
 bind_ip = "0.0.0.0" 
@@ -506,9 +508,6 @@ server = socket.create_server((bind_ip, bind_port))
 # we tell the server to start listening with a maximum backlog of connections set to 5
 server.listen(5) 
 print(f"[+] Listening on port {bind_ip} : {bind_port}")  
-
-# Start device
-picoDevice = StreamingDevice(samples, sample_interval, potential_range=ps2000.PS2000_VOLTAGE_RANGE['PS2000_20V'], pretrigger=pretrigger)
 
 # Collect data
 # main loop
