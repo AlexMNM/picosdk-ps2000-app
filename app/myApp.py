@@ -399,7 +399,7 @@ def handle_request(c):
 def is_socket_closed(sock: socket.socket) -> bool:
     try:
         # this will try to read bytes without blocking and also without removing them from buffer (peek only)
-        sock.setblocking(0)
+        sock.setblocking(False)
         data = sock.recv(16, socket.MSG_PEEK)
         if len(data) == 0:
             return True
