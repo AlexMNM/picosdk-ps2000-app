@@ -538,7 +538,7 @@ while True:
     request = c_sock.recv(1024).decode()
     print(f"[+] Recieved: {request}")
     match request:
-        case "START ACQUISITION":
+        case "START AQ":
             client_handler = threading.Thread(target=handle_request, args=(c_sock, ))
             client_handler.start()
             client_handler.join()
