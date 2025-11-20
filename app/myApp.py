@@ -542,16 +542,17 @@ picoDevice = StreamingDevice(samples, sample_interval, potential_range=ps2000.PS
 bind_ip = "0.0.0.0" 
 bind_port = 8000
 server = socket.create_server((bind_ip, bind_port))
+c_sock = socket.socket
 
 # we tell the server to start listening with a maximum backlog of connections set to 5
 server.listen(5) 
 print(f"[+] Listening on port {bind_ip} : {bind_port}")  
 
-# Collect data
+
 # main loop
 while True:
     
-    if is_socket_closed(server):
+    if is_socket_closed(c_sock):
         c_sock, addr = server.accept() 
         print(f"[+] Connection established from: {addr[0]}:{addr[1]} | Socket: {c_sock}")
         print(f"[+] Accepted connection from: {addr[0]}:{addr[1]}")
