@@ -68,12 +68,11 @@ def handle_request(c):
             #settings = buffer.data
             #picoDevice.set_trigger(leading_wave= settings.leading_wave)
             #picoDevice.set_samples(expected_pulses= settings.pulses)
-            picoDevice.run_streaming()
-
             response = "ACQUISITION STARTED"
             c.send(response.encode())
-            
             print("Gathering...")
+
+            picoDevice.run_streaming()
             valuesA, valuesB, trigger_start = picoDevice.gather()
             picoDevice.stop()
 
@@ -252,6 +251,7 @@ def handle_request(c):
             with open(filename, 'w') as f:
                 json.dump(data, f)
 
+            # Send response
             del data["raw_data"]
             results = json.dumps(data)
             c.send(b'ACQUISITION RESULTS,' + results.encode())
@@ -396,22 +396,6 @@ def handle_request(c):
     #    response = f"[+] ERROR STARTING ACQUISITION DUE TO MISSING DATA"
     #    c.send(response.encode())
     
-def is_socket_closed(sock: socket.socket) -> bool:
-    try:
-        # this will try to read bytes without blocking and also without removing them from buffer (peek only)
-        sock.setblocking(False)
-        data = sock.recv(16, socket.MSG_PEEK)
-        if len(data) == 0:
-            return True
-    except BlockingIOError:
-        return False  # socket is open and reading from it would block
-    except ConnectionResetError:
-        return True  # socket was closed for some other reason
-    except Exception as e:
-        logger.exception("unexpected exception when checking if a socket is closed")
-        return False
-    return False
-
 class StreamingDevice:
     def __init__(self, gather_values, sample_interval, potential_range=ps2000.PS2000_VOLTAGE_RANGE['PS2000_1V'], pretrigger = 4000):
         self.device = ps2000.open_unit()
@@ -539,26 +523,24 @@ pretrigger = seconds_to_samples(0.5 * expected_period)
 picoDevice = StreamingDevice(samples, sample_interval, potential_range=ps2000.PS2000_VOLTAGE_RANGE['PS2000_20V'], pretrigger=pretrigger)
 
 # Setup server
-bind_ip = "0.0.0.0" 
+bind_ip = '' 
 bind_port = 8000
-server = socket.create_server((bind_ip, bind_port))
+l_server = socket.create_server((socket.gethostbyname(), bind_port))
 
 # we tell the server to start listening with a maximum backlog of connections set to 5
-server.listen(5) 
+l_server.listen(5) 
 print(f"[+] Listening on port {bind_ip} : {bind_port}")  
 
-c_sock, addr = server.accept() 
 
 # main loop
 while True:
     
-    if is_socket_closed(c_sock):
-        c_sock, addr = server.accept() 
-        print(f"[+] Connection established from: {addr[0]}:{addr[1]} | Socket: {c_sock}")
-        print(f"[+] Accepted connection from: {addr[0]}:{addr[1]}")
+    c_sock, partner = l_server.accept() 
+    print(f"[+] Connection established from: {partner[0]}:{partner[1]} | Socket: {c_sock}")
+    print(f"[+] Accepted connection from: {partner[0]}:{partner[1]}")
     
     
-    request = c_sock.recv(1024).decode()
+    request = c_sock.recv(2048).decode()
     print(f"[+] Recieved: {request}")
     match request:
         case "START AQ":
@@ -567,9 +549,8 @@ while True:
             client_handler.join()
         case _:
             print("Unknown request received")
-    
 
-    
+    c_sock.close()    
     #Close device
     #picoDevice.close()
 
