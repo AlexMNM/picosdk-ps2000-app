@@ -7,6 +7,7 @@ from enum import IntEnum
 import json
 import socket
 import threading
+import os
 
 # Import packages
 import matplotlib.pyplot as plt
@@ -242,7 +243,9 @@ def handle_request(c):
                 }
             }
             timestamp = strftime("%Y%m%d-%H%M%S")
-            with open("./app/__pycache__/signals/signal_data_" + timestamp + ".json", 'w') as f:
+            filename = "./app/__pycache__/signals/signal_data_" + timestamp + ".json"
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            with open(filename, 'w') as f:
                 json.dump(data, f)
 
             del data["raw_data"]
