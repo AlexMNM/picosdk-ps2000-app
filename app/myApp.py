@@ -8,6 +8,7 @@ import json
 import socket
 import threading
 import os
+import logging
 
 # Import packages
 import matplotlib.pyplot as plt
@@ -21,6 +22,7 @@ from picosdk.functions import assert_pico2000_ok
 from picosdk.ctypes_wrapper import C_CALLBACK_FUNCTION_FACTORY
 
 
+logger = logging.getLogger(__name__)
 
 class TriggerDirection(IntEnum) :
     PS2000_RISING = 0
@@ -161,14 +163,16 @@ def handle_request(c):
             A_valleys, _ = find_peaks(A_flipped, distance=seconds_to_samples(period_A * 0.6), height=(A_mid, A_mid + A_span), prominence= np.max(A_filtrd) - A_mid, plateau_size=seconds_to_samples(period_A * 0.25))
             A_peak_widths = peak_widths(A_clipped, A_peaks, rel_height=0.01)
             A_pk_prominences = peak_prominences(A_clipped, A_peaks)[0]
-            A_valley_widths = peak_widths(A_flipped, A_valleys, rel_height=0.01)
+            A_valley_widths = np.concatenate(np.empty((1,2)), peak_widths(A_flipped, A_valleys, rel_height=0.01))
+            A_valley_widths.resize(np.shape(A_peak_widths))
             A_nr_peaks = len(A_peaks)
 
             B_peaks, _ = find_peaks(B_clipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
             B_valleys, _ = find_peaks(B_flipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
             B_peak_widths = peak_widths(B_clipped, B_peaks, rel_height=0.01)
             B_pk_prominences = peak_prominences(B_clipped, B_peaks)[0]
-            B_valley_widths = peak_widths(B_flipped, B_valleys, rel_height=0.01)
+            B_valley_widths = np.concatenate(np.empty((1,2)), peak_widths(B_flipped, B_valleys, rel_height=0.01))
+            B_valley_widths.resize(np.shape(B_peak_widths))
             B_nr_peaks = len(B_peaks)
 
             print('Nr. of peaks A: {}'.format(len(A_peaks)))
@@ -392,8 +396,20 @@ def handle_request(c):
     #    response = f"[+] ERROR STARTING ACQUISITION DUE TO MISSING DATA"
     #    c.send(response.encode())
     
-
-
+def is_socket_closed(sock: socket.socket) -> bool:
+    try:
+        # this will try to read bytes without blocking and also without removing them from buffer (peek only)
+        data = sock.recv(16, socket.MSG_DONTWAIT | socket.MSG_PEEK)
+        if len(data) == 0:
+            return True
+    except BlockingIOError:
+        return False  # socket is open and reading from it would block
+    except ConnectionResetError:
+        return True  # socket was closed for some other reason
+    except Exception as e:
+        logger.exception("unexpected exception when checking if a socket is closed")
+        return False
+    return False
 
 class StreamingDevice:
     def __init__(self, gather_values, sample_interval, potential_range=ps2000.PS2000_VOLTAGE_RANGE['PS2000_1V'], pretrigger = 4000):
@@ -533,10 +549,12 @@ print(f"[+] Listening on port {bind_ip} : {bind_port}")
 # Collect data
 # main loop
 while True:
-    # wait trigger
-    c_sock, addr = server.accept() 
-    print(f"[+] Connection established from: {addr[0]}:{addr[1]} | Socket: {c_sock}")
-    print(f"[+] Accepted connection from: {addr[0]}:{addr[1]}")
+    
+    if is_socket_closed(server):
+        c_sock, addr = server.accept() 
+        print(f"[+] Connection established from: {addr[0]}:{addr[1]} | Socket: {c_sock}")
+        print(f"[+] Accepted connection from: {addr[0]}:{addr[1]}")
+    
     
     request = c_sock.recv(1024).decode()
     print(f"[+] Recieved: {request}")
