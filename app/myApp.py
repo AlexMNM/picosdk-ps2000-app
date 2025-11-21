@@ -538,17 +538,20 @@ while True:
     print(f"[+] Connection established from: {partner[0]}:{partner[1]} | Socket: {c_sock}")
     print(f"[+] Accepted connection from: {partner[0]}:{partner[1]}")
     
-    
-    request = c_sock.recv(2048).decode()
-    print(f"[+] Recieved: {request}")
-    match request:
-        case "START AQ":
-            client_handler = threading.Thread(target=handle_request, args=(c_sock, ))
-            client_handler.start()
-            client_handler.join()
-        case _:
-            print("Unknown request received")
+    try: 
+        request = c_sock.recv(2048).decode()
+        print(f"[+] Recieved: {request}")
+    except ConnectionResetError: 
+        continue
 
+    match request:
+            case "START AQ":
+                client_handler = threading.Thread(target=handle_request, args=(c_sock, ))
+                client_handler.start()
+                client_handler.join()
+            case _:
+                print("Unknown request received")
+                
     c_sock.close()    
     #Close device
     #picoDevice.close()
