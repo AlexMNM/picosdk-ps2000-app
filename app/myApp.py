@@ -546,9 +546,10 @@ while True:
 
     match request:
             case "START AQ":
-                client_handler = threading.Thread(target=handle_request, args=(c_sock, ))
-                client_handler.start()
-                client_handler.join()
+                #client_handler = threading.Thread(target=handle_request, args=(c_sock, ))
+                #client_handler.start()
+                #client_handler.join()
+                handle_request(c_sock)
             case _:
                 print("Unknown request received")
                 
