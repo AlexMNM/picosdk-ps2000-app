@@ -257,80 +257,99 @@ def handle_request(c):
             
             global fig, axs
 
-            for ax in axs:
-                ax.clear()
-
             _, units = determine_time_unit(nsamples * sample_interval)
             interval = samples_to_seconds(nsamples) * 1000
             n = 0
 
             axs[n].set_xlabel('time/{}'.format(units))
             axs[n].hlines(A_mid, 0, interval, linestyle='dotted')
+            plt.pause(0.001)
             for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
                 s = samples_to_seconds(s) * 1000
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].text(x1, A_mid - 0.2 + 0.3 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                 axs[n].hlines(A_mid, x1, x2, color = 'red')
+                plt.pause(0.001)
             axs[n].hlines(A_upper_threshold, 0, interval, color = 'green')
+            plt.pause(0.001)
             axs[n].hlines(A_lower_threshold, 0, interval, color = 'green')
+            plt.pause(0.001)
             axs[n].plot(np.linspace(0, interval, nsamples), A_filtrd)
+            plt.pause(0.001)
             n += 1
 
 
             axs[n].set_xlabel('time/{}'.format(units))
             axs[n].plot(np.linspace(0, interval, nsamples), A_clipped)
+            plt.pause(0.001)
             axs[n].plot(samples_to_seconds(A_peaks)*1000, A_clipped[A_peaks], 'x')
+            plt.pause(0.001)
             axs[n].plot(samples_to_seconds(A_valleys)*1000, A_clipped[A_valleys], 'x')
+            plt.pause(0.001)
             for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
                 s = samples_to_seconds(s) * 1000
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].text(x1, A_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                 axs[n].hlines(A_mid, x1, x2, color = 'red')
+                plt.pause(0.001)
             for x1, x2 in zip(A_peak_widths[2], A_peak_widths[3]):
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].hlines(A_mid + 0.1, x1, x2, color='orange')
+                plt.pause(0.001)
             for x1, x2 in zip(A_valley_widths[2], A_valley_widths[3]):
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].hlines(A_mid - 0.1, x1, x2, color='green') 
+                plt.pause(0.001)
             n += 1
 
 
             axs[n].set_xlabel('time/{}'.format(units))
             axs[n].hlines(B_mid, 0, interval, linestyle='dotted')
+            plt.pause(0.001)
             for i, (x1, x2, s) in enumerate(zip(B_bounces[1], B_bounces[2], B_bounces[0])):
                 s = samples_to_seconds(s) * 1000
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].text(x1, B_mid - 0.2 + 0.3 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                 axs[n].hlines(B_mid, x1, x2, color = 'red')
+                plt.pause(0.001)
             axs[n].hlines(B_upper_threshold, 0, interval, color = 'green')
+            plt.pause(0.001)
             axs[n].hlines(B_lower_threshold, 0, interval, color = 'green')
+            plt.pause(0.001)
             axs[n].plot(np.linspace(0, interval, nsamples), B_filtrd)
+            plt.pause(0.001)
             n += 1
 
 
             axs[n].set_xlabel('time/{}'.format(units))
             axs[n].plot(np.linspace(0, interval, nsamples), B_clipped)
+            plt.pause(0.001)
             axs[n].plot(samples_to_seconds(B_peaks)*1000, B_clipped[B_peaks], 'x')
+            plt.pause(0.001)
             axs[n].plot(samples_to_seconds(B_valleys)*1000, B_clipped[B_valleys], 'x')
+            plt.pause(0.001)
             for i, (x1, x2, s) in enumerate(zip(B_bounces[1], B_bounces[2], B_bounces[0])):
                 s = samples_to_seconds(s) * 1000
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].text(x1, B_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                 axs[n].hlines(B_mid, x1, x2, color = 'red')
+                plt.pause(0.001)
             for x1, x2 in zip(B_peak_widths[2], B_peak_widths[3]):
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].hlines(B_mid + 0.1, x1, x2, color='orange')
+                plt.pause(0.001)
             for x1, x2 in zip(B_valley_widths[2], B_valley_widths[3]):
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].hlines(B_mid - 0.1, x1, x2, color='green') 
+                plt.pause(0.001)
             n += 1
 
 
@@ -535,8 +554,8 @@ print(f"[+] Listening on port {bind_ip} : {bind_port}")
 
 fig, axs = plt.subplots(4)
 plt.ion()
-#plt.show()
-#plt.pause(0.01) 
+plt.show()
+plt.pause(0.001) 
 
 # main loop
 while True:
@@ -555,6 +574,9 @@ while True:
 
     match request:
             case "START AQ":
+                for ax in axs:
+                    ax.clear()
+                    
                 handle_request(c_sock)  
 
             case _:
