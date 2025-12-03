@@ -388,8 +388,9 @@ def handle_request(c):
             axs[n].plot(A_grd, color='green')
             n += 1 """
 
-
-            plt.show()
+            plt.ion()
+            plt.show()    
+            plt.pause(0.1)
     #except:
     #    response = f"[+] ERROR STARTING ACQUISITION DUE TO MISSING DATA"
     #    c.send(response.encode())
