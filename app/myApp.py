@@ -159,6 +159,8 @@ def handle_request(c):
 
             # Peaks
             A_peaks, _ = find_peaks(A_clipped, distance=seconds_to_samples(period_A * 0.6), height=(A_mid, A_mid + A_span), prominence= np.max(A_filtrd) - A_mid, plateau_size=seconds_to_samples(period_A * 0.25))
+            A_flipped[:A_peaks[0]].fill(A_lower_threshold)
+            A_flipped[A_peaks[-1]:].fill(A_lower_threshold)
             A_valleys, _ = find_peaks(A_flipped, distance=seconds_to_samples(period_A * 0.6), height=(A_mid, A_mid + A_span), prominence= np.max(A_filtrd) - A_mid, plateau_size=seconds_to_samples(period_A * 0.25))
             A_peak_widths = peak_widths(A_clipped, A_peaks, rel_height=0.01)
             A_pk_prominences = peak_prominences(A_clipped, A_peaks)[0]
@@ -166,6 +168,8 @@ def handle_request(c):
             A_nr_peaks = len(A_peaks)
 
             B_peaks, _ = find_peaks(B_clipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
+            B_flipped[:B_peaks[0]].fill(B_lower_threshold)
+            B_flipped[B_peaks[-1]:].fill(B_lower_threshold)
             B_valleys, _ = find_peaks(B_flipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
             B_peak_widths = peak_widths(B_clipped, B_peaks, rel_height=0.01)
             B_pk_prominences = peak_prominences(B_clipped, B_peaks)[0]
@@ -180,7 +184,7 @@ def handle_request(c):
 
             A_bounces = np.empty((3, A_nr_peaks * 2))
             if A_nr_peaks > 0:
-                A_bounces[1][0] = np.where(A_filtrd[:int(A_peak_widths[2][0])] > A_lower_threshold)[0][0]
+                A_bounces[1][0] = np.where(A_filtrd[:int(A_peak_widths[2][0])] < A_lower_threshold)[0][-1]
                 A_bounces[2][0] = A_peak_widths[2][0]
                 for x in range(0, A_nr_peaks - 1):
                     A_bounces[1][2 * x + 1] = A_peak_widths[3][x]
@@ -189,14 +193,14 @@ def handle_request(c):
                     A_bounces[1][2 * x] = A_valley_widths[3][x - 1]
                     A_bounces[2][2 * x] = A_peak_widths[2][x]
                 A_bounces[1][A_nr_peaks * 2 - 1] = A_peak_widths[3][A_nr_peaks - 1]
-                A_bounces[2][A_nr_peaks * 2 - 1] = int(A_peak_widths[3][A_nr_peaks - 1]) + np.where(A_filtrd[int(A_peak_widths[3][A_nr_peaks - 1]):] > A_lower_threshold)[0][-1]
+                A_bounces[2][A_nr_peaks * 2 - 1] = int(A_peak_widths[3][A_nr_peaks - 1]) + np.where(A_filtrd[int(A_peak_widths[3][A_nr_peaks - 1]):] > A_lower_threshold)[0][0]
                 for x in range(0, A_nr_peaks * 2):
                     A_bounces[0][x] = A_bounces[2][x] - A_bounces[1][x]
 
 
             B_bounces = np.empty((3, B_nr_peaks * 2))
             if B_nr_peaks > 0:
-                B_bounces[1][0] = np.where(B_filtrd[:int(B_peak_widths[2][0])] > B_lower_threshold)[0][0]
+                B_bounces[1][0] = np.where(B_filtrd[:int(B_peak_widths[2][0])] < B_lower_threshold)[0][-1]
                 B_bounces[2][0] = B_peak_widths[2][0]
                 for x in range(0, B_nr_peaks - 1):
                     B_bounces[1][2 * x + 1] = B_peak_widths[3][x]
@@ -205,7 +209,7 @@ def handle_request(c):
                     B_bounces[1][2 * x] = B_valley_widths[3][x - 1]
                     B_bounces[2][2 * x] = B_peak_widths[2][x]
                 B_bounces[1][B_nr_peaks * 2 - 1] = B_peak_widths[3][B_nr_peaks - 1]
-                B_bounces[2][B_nr_peaks * 2 - 1] = int(B_peak_widths[3][B_nr_peaks - 1]) + np.where(B_filtrd[int(B_peak_widths[3][B_nr_peaks - 1]):] > B_lower_threshold)[0][-1]
+                B_bounces[2][B_nr_peaks * 2 - 1] = int(B_peak_widths[3][B_nr_peaks - 1]) + np.where(B_filtrd[int(B_peak_widths[3][B_nr_peaks - 1]):] < B_lower_threshold)[0][0]
                 for x in range(0, B_nr_peaks * 2):
                     B_bounces[0][x] = B_bounces[2][x] - B_bounces[1][x]
 
@@ -270,11 +274,9 @@ def handle_request(c):
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].text(x1, A_mid - 0.2 + 0.3 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                 axs[n].hlines(A_mid, x1, x2, color = 'red')
-                plt.pause(0.001)
+            plt.pause(0.001)
             axs[n].hlines(A_upper_threshold, 0, interval, color = 'green')
-            plt.pause(0.001)
             axs[n].hlines(A_lower_threshold, 0, interval, color = 'green')
-            plt.pause(0.001)
             axs[n].plot(np.linspace(0, interval, nsamples), A_filtrd)
             plt.pause(0.001)
             n += 1
@@ -293,17 +295,17 @@ def handle_request(c):
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].text(x1, A_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                 axs[n].hlines(A_mid, x1, x2, color = 'red')
-                plt.pause(0.001)
+            plt.pause(0.001)
             for x1, x2 in zip(A_peak_widths[2], A_peak_widths[3]):
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].hlines(A_mid + 0.1, x1, x2, color='orange')
-                plt.pause(0.001)
+            plt.pause(0.001)
             for x1, x2 in zip(A_valley_widths[2], A_valley_widths[3]):
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].hlines(A_mid - 0.1, x1, x2, color='green') 
-                plt.pause(0.001)
+            plt.pause(0.001)
             n += 1
 
 
@@ -316,7 +318,7 @@ def handle_request(c):
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].text(x1, B_mid - 0.2 + 0.3 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                 axs[n].hlines(B_mid, x1, x2, color = 'red')
-                plt.pause(0.001)
+            plt.pause(0.001)
             axs[n].hlines(B_upper_threshold, 0, interval, color = 'green')
             plt.pause(0.001)
             axs[n].hlines(B_lower_threshold, 0, interval, color = 'green')
@@ -339,17 +341,17 @@ def handle_request(c):
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].text(x1, B_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                 axs[n].hlines(B_mid, x1, x2, color = 'red')
-                plt.pause(0.001)
+            plt.pause(0.001)
             for x1, x2 in zip(B_peak_widths[2], B_peak_widths[3]):
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].hlines(B_mid + 0.1, x1, x2, color='orange')
-                plt.pause(0.001)
+            plt.pause(0.001)
             for x1, x2 in zip(B_valley_widths[2], B_valley_widths[3]):
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].hlines(B_mid - 0.1, x1, x2, color='green') 
-                plt.pause(0.001)
+            plt.pause(0.001)
             n += 1
 
 
@@ -576,7 +578,7 @@ while True:
             case "START AQ":
                 for ax in axs:
                     ax.clear()
-                    
+
                 handle_request(c_sock)  
 
             case _:
