@@ -255,7 +255,7 @@ def handle_request(c):
             c.send(b'ACQUISITION RESULTS,' + results.encode())
 
             
-            axs.clear()
+            #plt.clf()
             _, units = determine_time_unit(nsamples * sample_interval)
             interval = samples_to_seconds(nsamples) * 1000
             n = 0
