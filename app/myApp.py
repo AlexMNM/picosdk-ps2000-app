@@ -255,7 +255,6 @@ def handle_request(c):
             c.send(b'ACQUISITION RESULTS,' + results.encode())
 
             
-            fig.clf()
             _, units = determine_time_unit(nsamples * sample_interval)
             interval = samples_to_seconds(nsamples) * 1000
             n = 0
@@ -388,8 +387,9 @@ def handle_request(c):
             axs[n].plot(A_grd, color='green')
             n += 1 """
 
-            fig.show()
-            plt.pause(0.1)
+            #plt.pause(0.1)
+            #plt.show()
+            
     #except:
     #    response = f"[+] ERROR STARTING ACQUISITION DUE TO MISSING DATA"
     #    c.send(response.encode())
@@ -506,8 +506,8 @@ class StreamingDevice:
         ps2000.ps2000_stop(self.device.handle)
 
 
+plt.ion()
 fig, axs = plt.subplots(4)
-#plt.ion()
 #plt.show()  
 
 # Setup
@@ -556,6 +556,8 @@ while True:
                 #client_handler.start()
                 #client_handler.join()
                 handle_request(c_sock)
+                fig.canvas.draw()
+                fig.canvas.flush_events()
             case _:
                 print("Unknown request received")
                 
