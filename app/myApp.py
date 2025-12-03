@@ -181,7 +181,7 @@ def handle_request(c):
                     A_bounces[1][2 * x] = A_valley_widths[3][x - 1]
                     A_bounces[2][2 * x] = A_peak_widths[2][x]
                 A_bounces[1][A_nr_peaks * 2 - 1] = A_peak_widths[3][A_nr_peaks - 1]
-                A_bounces[2][A_nr_peaks * 2 - 1] = int(A_peak_widths[3][A_nr_peaks - 1]) + np.where(A_filtrd[int(A_peak_widths[3][A_nr_peaks - 1]):int(A_peak_widths[3][A_nr_peaks - 1] + A_valley_widths[0][-1]/2)] < A_lower_threshold)[0][-1]
+                A_bounces[2][A_nr_peaks * 2 - 1] = int(A_peak_widths[3][A_nr_peaks - 1]) + np.where(A_filtrd[int(A_peak_widths[3][A_nr_peaks - 1]):(int(A_peak_widths[3][A_nr_peaks - 1] + A_valley_widths[0][-1]/2))] > A_lower_threshold)[0][-1]
                 for x in range(0, A_nr_peaks * 2):
                     A_bounces[0][x] = A_bounces[2][x] - A_bounces[1][x]
 
@@ -209,7 +209,7 @@ def handle_request(c):
                     B_bounces[1][2 * x] = B_valley_widths[3][x - 1]
                     B_bounces[2][2 * x] = B_peak_widths[2][x]
                 B_bounces[1][B_nr_peaks * 2 - 1] = B_peak_widths[3][B_nr_peaks - 1]
-                B_bounces[2][B_nr_peaks * 2 - 1] = int(B_peak_widths[3][B_nr_peaks - 1]) + np.where(B_filtrd[int(B_peak_widths[3][B_nr_peaks - 1]):int(B_peak_widths[3][B_nr_peaks - 1] + B_valley_widths[0][-1]/2)] < B_lower_threshold)[0][-1]
+                B_bounces[2][B_nr_peaks * 2 - 1] = int(B_peak_widths[3][B_nr_peaks - 1]) + np.where(B_filtrd[int(B_peak_widths[3][B_nr_peaks - 1]):int(B_peak_widths[3][B_nr_peaks - 1] + B_valley_widths[0][-1]/2)] > B_lower_threshold)[0][-1]
                 for x in range(0, B_nr_peaks * 2):
                     B_bounces[0][x] = B_bounces[2][x] - B_bounces[1][x]
 
