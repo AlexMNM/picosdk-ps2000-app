@@ -135,7 +135,7 @@ def handle_request(c):
                 _gradient -= _gradient.mean()
                 _gradient /= _gradient.std()
                 _gradient[:int(_gradient.size/5)] = _gradient[-int(_gradient.size/5):] = 0
-                _lower = _sorted[np.where(_gradient >= 3*_gradient.std())[0][0]]
+                _lower = _sorted[np.where(_gradient >= 5*_gradient.std())[0][0]]
                 _upper = _sorted[np.where(_gradient >= 3*_gradient.std())[0][-1]]
                 return _lower, _upper, _gradient
 
@@ -535,8 +535,8 @@ print(f"[+] Listening on port {bind_ip} : {bind_port}")
 
 fig, axs = plt.subplots(4)
 plt.ion()
-plt.show()
-plt.pause(0.01) 
+#plt.show()
+#plt.pause(0.01) 
 
 # main loop
 while True:
