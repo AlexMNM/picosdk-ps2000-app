@@ -255,6 +255,7 @@ def handle_request(c):
             c.send(b'ACQUISITION RESULTS,' + results.encode())
 
             
+            fig, axs = plt.subplots(4)
             _, units = determine_time_unit(nsamples * sample_interval)
             interval = samples_to_seconds(nsamples) * 1000
             n = 0
@@ -505,11 +506,6 @@ class StreamingDevice:
     def stop(self):
         ps2000.ps2000_stop(self.device.handle)
 
-
-plt.ion()
-fig, axs = plt.subplots(4)
-#plt.show()  
-
 # Setup
 #first_edge = 'A' # A or B, depending on the direction of rotation
 expected_pulses = 8 # how many pulses should the encoder have in one turn / second
@@ -555,13 +551,13 @@ while True:
                 #client_handler = threading.Thread(target=handle_request, args=(c_sock, ))
                 #client_handler.start()
                 #client_handler.join()
-                handle_request(c_sock)
-                fig.canvas.draw()
-                fig.canvas.flush_events()
+                plt.close()
+                handle_request(c_sock)  
+                plt.show()  
             case _:
                 print("Unknown request received")
                 
-    c_sock.close()    
+    c_sock.close()  
     #Close device
     #picoDevice.close()
 
