@@ -159,31 +159,19 @@ def handle_request(c):
 
             # Peaks
             A_peaks, _ = find_peaks(A_clipped, distance=seconds_to_samples(period_A * 0.6), height=(A_mid, A_mid + A_span), prominence= np.max(A_filtrd) - A_mid, plateau_size=seconds_to_samples(period_A * 0.25))
-            A_flipped[:A_peaks[0]].fill(A_lower_threshold)
-            A_flipped[A_peaks[-1]:].fill(A_lower_threshold)
-            A_valleys, _ = find_peaks(A_flipped, distance=seconds_to_samples(period_A * 0.6), height=(A_mid, A_mid + A_span), prominence= np.max(A_filtrd) - A_mid, plateau_size=seconds_to_samples(period_A * 0.25))
-            A_peak_widths = peak_widths(A_clipped, A_peaks, rel_height=0.01)
-            A_pk_prominences = peak_prominences(A_clipped, A_peaks)[0]
-            A_valley_widths = peak_widths(A_flipped, A_valleys, rel_height=0.01)
             A_nr_peaks = len(A_peaks)
-
-            B_peaks, _ = find_peaks(B_clipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
-            B_flipped[:B_peaks[0]].fill(B_lower_threshold)
-            B_flipped[B_peaks[-1]:].fill(B_lower_threshold)
-            B_valleys, _ = find_peaks(B_flipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
-            B_peak_widths = peak_widths(B_clipped, B_peaks, rel_height=0.01)
-            B_pk_prominences = peak_prominences(B_clipped, B_peaks)[0]
-            B_valley_widths = peak_widths(B_flipped, B_valleys, rel_height=0.01)
-            B_nr_peaks = len(B_peaks)
-
             print('Nr. of peaks A: {}'.format(len(A_peaks)))
-            print('Nr. of peaks B: {}'.format(len(B_peaks)))
-            print('Widths of A [ms]: \n{}'.format(1000 * samples_to_seconds(A_peak_widths[0])))
-            print('Widths of B [ms]: \n{}'.format(1000 * samples_to_seconds(B_peak_widths[0])))
-            print(A_peak_widths[2:])
 
             A_bounces = np.empty((3, A_nr_peaks * 2))
             if A_nr_peaks > 0:
+                A_flipped[:A_peaks[0]].fill(A_lower_threshold)
+                A_flipped[A_peaks[-1]:].fill(A_lower_threshold)
+                A_valleys, _ = find_peaks(A_flipped, distance=seconds_to_samples(period_A * 0.6), height=(A_mid, A_mid + A_span), prominence= np.max(A_filtrd) - A_mid, plateau_size=seconds_to_samples(period_A * 0.25))
+                A_peak_widths = peak_widths(A_clipped, A_peaks, rel_height=0.01)
+                print('Widths of A [ms]: \n{}'.format(1000 * samples_to_seconds(A_peak_widths[0])))
+                A_pk_prominences = peak_prominences(A_clipped, A_peaks)[0]
+                A_valley_widths = peak_widths(A_flipped, A_valleys, rel_height=0.01)
+
                 A_bounces[1][0] = np.where(A_filtrd[:int(A_peak_widths[2][0])] < A_lower_threshold)[0][-1]
                 A_bounces[2][0] = A_peak_widths[2][0]
                 for x in range(0, A_nr_peaks - 1):
@@ -198,8 +186,20 @@ def handle_request(c):
                     A_bounces[0][x] = A_bounces[2][x] - A_bounces[1][x]
 
 
+            B_peaks, _ = find_peaks(B_clipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
+            B_nr_peaks = len(B_peaks)
+            print('Nr. of peaks B: {}'.format(len(B_peaks)))
+            
             B_bounces = np.empty((3, B_nr_peaks * 2))
             if B_nr_peaks > 0:
+                B_flipped[:B_peaks[0]].fill(B_lower_threshold)
+                B_flipped[B_peaks[-1]:].fill(B_lower_threshold)
+                B_valleys, _ = find_peaks(B_flipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
+                B_peak_widths = peak_widths(B_clipped, B_peaks, rel_height=0.01)
+                print('Widths of B [ms]: \n{}'.format(1000 * samples_to_seconds(B_peak_widths[0])))
+                B_pk_prominences = peak_prominences(B_clipped, B_peaks)[0]
+                B_valley_widths = peak_widths(B_flipped, B_valleys, rel_height=0.01)
+
                 B_bounces[1][0] = np.where(B_filtrd[:int(B_peak_widths[2][0])] < B_lower_threshold)[0][-1]
                 B_bounces[2][0] = B_peak_widths[2][0]
                 for x in range(0, B_nr_peaks - 1):
