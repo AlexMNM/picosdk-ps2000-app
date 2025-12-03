@@ -392,9 +392,6 @@ def handle_request(c):
             axs[n].plot(A_grd, color='green')
             n += 1 """
             
-            for ax in axs:
-                ax.draw()
-
     #except:
     #    response = f"[+] ERROR STARTING ACQUISITION DUE TO MISSING DATA"
     #    c.send(response.encode())
@@ -537,7 +534,9 @@ l_server.listen(5)
 print(f"[+] Listening on port {bind_ip} : {bind_port}")  
 
 fig, axs = plt.subplots(4)
-plt.show() 
+plt.ion()
+plt.show()
+plt.pause(0.01) 
 
 # main loop
 while True:
