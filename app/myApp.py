@@ -189,7 +189,7 @@ def handle_request(c):
             B_peaks, _ = find_peaks(B_clipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
             B_nr_peaks = len(B_peaks)
             print('Nr. of peaks B: {}'.format(len(B_peaks)))
-            
+
             B_bounces = np.empty((3, B_nr_peaks * 2))
             if B_nr_peaks > 0:
                 B_flipped[:B_peaks[0]].fill(B_lower_threshold)
@@ -285,27 +285,28 @@ def handle_request(c):
             axs[n].set_xlabel('time/{}'.format(units))
             axs[n].plot(np.linspace(0, interval, nsamples), A_clipped)
             plt.pause(0.001)
-            axs[n].plot(samples_to_seconds(A_peaks)*1000, A_clipped[A_peaks], 'x')
-            plt.pause(0.001)
-            axs[n].plot(samples_to_seconds(A_valleys)*1000, A_clipped[A_valleys], 'x')
-            plt.pause(0.001)
-            for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
-                s = samples_to_seconds(s) * 1000
-                x1 = samples_to_seconds(x1) * 1000
-                x2 = samples_to_seconds(x2) * 1000
-                axs[n].text(x1, A_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
-                axs[n].hlines(A_mid, x1, x2, color = 'red')
-            plt.pause(0.001)
-            for x1, x2 in zip(A_peak_widths[2], A_peak_widths[3]):
-                x1 = samples_to_seconds(x1) * 1000
-                x2 = samples_to_seconds(x2) * 1000
-                axs[n].hlines(A_mid + 0.1, x1, x2, color='orange')
-            plt.pause(0.001)
-            for x1, x2 in zip(A_valley_widths[2], A_valley_widths[3]):
-                x1 = samples_to_seconds(x1) * 1000
-                x2 = samples_to_seconds(x2) * 1000
-                axs[n].hlines(A_mid - 0.1, x1, x2, color='green') 
-            plt.pause(0.001)
+            if A_nr_peaks > 0:
+                axs[n].plot(samples_to_seconds(A_peaks)*1000, A_clipped[A_peaks], 'x')
+                plt.pause(0.001)
+                axs[n].plot(samples_to_seconds(A_valleys)*1000, A_clipped[A_valleys], 'x')
+                plt.pause(0.001)
+                for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
+                    s = samples_to_seconds(s) * 1000
+                    x1 = samples_to_seconds(x1) * 1000
+                    x2 = samples_to_seconds(x2) * 1000
+                    axs[n].text(x1, A_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
+                    axs[n].hlines(A_mid, x1, x2, color = 'red')
+                plt.pause(0.001)
+                for x1, x2 in zip(A_peak_widths[2], A_peak_widths[3]):
+                    x1 = samples_to_seconds(x1) * 1000
+                    x2 = samples_to_seconds(x2) * 1000
+                    axs[n].hlines(A_mid + 0.1, x1, x2, color='orange')
+                plt.pause(0.001)
+                for x1, x2 in zip(A_valley_widths[2], A_valley_widths[3]):
+                    x1 = samples_to_seconds(x1) * 1000
+                    x2 = samples_to_seconds(x2) * 1000
+                    axs[n].hlines(A_mid - 0.1, x1, x2, color='green') 
+                plt.pause(0.001)
             n += 1
 
 
@@ -331,27 +332,28 @@ def handle_request(c):
             axs[n].set_xlabel('time/{}'.format(units))
             axs[n].plot(np.linspace(0, interval, nsamples), B_clipped)
             plt.pause(0.001)
-            axs[n].plot(samples_to_seconds(B_peaks)*1000, B_clipped[B_peaks], 'x')
-            plt.pause(0.001)
-            axs[n].plot(samples_to_seconds(B_valleys)*1000, B_clipped[B_valleys], 'x')
-            plt.pause(0.001)
-            for i, (x1, x2, s) in enumerate(zip(B_bounces[1], B_bounces[2], B_bounces[0])):
-                s = samples_to_seconds(s) * 1000
-                x1 = samples_to_seconds(x1) * 1000
-                x2 = samples_to_seconds(x2) * 1000
-                axs[n].text(x1, B_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
-                axs[n].hlines(B_mid, x1, x2, color = 'red')
-            plt.pause(0.001)
-            for x1, x2 in zip(B_peak_widths[2], B_peak_widths[3]):
-                x1 = samples_to_seconds(x1) * 1000
-                x2 = samples_to_seconds(x2) * 1000
-                axs[n].hlines(B_mid + 0.1, x1, x2, color='orange')
-            plt.pause(0.001)
-            for x1, x2 in zip(B_valley_widths[2], B_valley_widths[3]):
-                x1 = samples_to_seconds(x1) * 1000
-                x2 = samples_to_seconds(x2) * 1000
-                axs[n].hlines(B_mid - 0.1, x1, x2, color='green') 
-            plt.pause(0.001)
+            if B_nr_peaks > 0:
+                axs[n].plot(samples_to_seconds(B_peaks)*1000, B_clipped[B_peaks], 'x')
+                plt.pause(0.001)
+                axs[n].plot(samples_to_seconds(B_valleys)*1000, B_clipped[B_valleys], 'x')
+                plt.pause(0.001)
+                for i, (x1, x2, s) in enumerate(zip(B_bounces[1], B_bounces[2], B_bounces[0])):
+                    s = samples_to_seconds(s) * 1000
+                    x1 = samples_to_seconds(x1) * 1000
+                    x2 = samples_to_seconds(x2) * 1000
+                    axs[n].text(x1, B_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
+                    axs[n].hlines(B_mid, x1, x2, color = 'red')
+                plt.pause(0.001)
+                for x1, x2 in zip(B_peak_widths[2], B_peak_widths[3]):
+                    x1 = samples_to_seconds(x1) * 1000
+                    x2 = samples_to_seconds(x2) * 1000
+                    axs[n].hlines(B_mid + 0.1, x1, x2, color='orange')
+                plt.pause(0.001)
+                for x1, x2 in zip(B_valley_widths[2], B_valley_widths[3]):
+                    x1 = samples_to_seconds(x1) * 1000
+                    x2 = samples_to_seconds(x2) * 1000
+                    axs[n].hlines(B_mid - 0.1, x1, x2, color='green') 
+                plt.pause(0.001)
             n += 1
 
 
