@@ -255,7 +255,11 @@ def handle_request(c):
             c.send(b'ACQUISITION RESULTS,' + results.encode())
 
             
-            fig, axs = plt.subplots(4)
+            global fig, axs
+
+            for ax in axs:
+                ax.clear()
+
             _, units = determine_time_unit(nsamples * sample_interval)
             interval = samples_to_seconds(nsamples) * 1000
             n = 0
@@ -387,10 +391,10 @@ def handle_request(c):
             """ #axs[n].hist(A_filtrd, density=True, bins=1000)
             axs[n].plot(A_grd, color='green')
             n += 1 """
-
-            #plt.pause(0.1)
-            #plt.show()
             
+            for ax in axs:
+                ax.draw()
+
     #except:
     #    response = f"[+] ERROR STARTING ACQUISITION DUE TO MISSING DATA"
     #    c.send(response.encode())
@@ -506,6 +510,8 @@ class StreamingDevice:
     def stop(self):
         ps2000.ps2000_stop(self.device.handle)
 
+
+
 # Setup
 #first_edge = 'A' # A or B, depending on the direction of rotation
 expected_pulses = 8 # how many pulses should the encoder have in one turn / second
@@ -530,6 +536,8 @@ print(socket.gethostname())
 l_server.listen(5) 
 print(f"[+] Listening on port {bind_ip} : {bind_port}")  
 
+fig, axs = plt.subplots(4)
+plt.show() 
 
 # main loop
 while True:
@@ -548,14 +556,8 @@ while True:
 
     match request:
             case "START AQ":
-                #client_handler = threading.Thread(target=handle_request, args=(c_sock, ))
-                #client_handler.start()
-                #client_handler.join()
-                plt.close()
                 handle_request(c_sock)  
-                plt.ion()
-                plt.show()  
-                plt.pause(0.01)
+
             case _:
                 print("Unknown request received")
                 
