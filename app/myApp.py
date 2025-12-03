@@ -553,7 +553,7 @@ while True:
                 #client_handler.join()
                 plt.close()
                 handle_request(c_sock)  
-                plt.int()
+                plt.ion()
                 plt.show()  
                 plt.pause(0.01)
             case _:
