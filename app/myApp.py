@@ -255,7 +255,7 @@ def handle_request(c):
             c.send(b'ACQUISITION RESULTS,' + results.encode())
 
             
-            plt.clf()
+            fig.clf()
             _, units = determine_time_unit(nsamples * sample_interval)
             interval = samples_to_seconds(nsamples) * 1000
             n = 0
@@ -388,7 +388,7 @@ def handle_request(c):
             axs[n].plot(A_grd, color='green')
             n += 1 """
 
-  
+            fig.show()
             plt.pause(0.1)
     #except:
     #    response = f"[+] ERROR STARTING ACQUISITION DUE TO MISSING DATA"
@@ -507,8 +507,8 @@ class StreamingDevice:
 
 
 fig, axs = plt.subplots(4)
-plt.ion()
-plt.show()  
+#plt.ion()
+#plt.show()  
 
 # Setup
 #first_edge = 'A' # A or B, depending on the direction of rotation
