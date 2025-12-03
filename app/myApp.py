@@ -388,8 +388,7 @@ def handle_request(c):
             axs[n].plot(A_grd, color='green')
             n += 1 """
 
-            plt.ion()
-            plt.show()    
+  
             plt.pause(0.1)
     #except:
     #    response = f"[+] ERROR STARTING ACQUISITION DUE TO MISSING DATA"
@@ -550,7 +549,9 @@ while True:
                 #client_handler = threading.Thread(target=handle_request, args=(c_sock, ))
                 #client_handler.start()
                 #client_handler.join()
+                plt.ion()
                 handle_request(c_sock)
+                plt.show()  
             case _:
                 print("Unknown request received")
                 
