@@ -172,7 +172,7 @@ def handle_request(c):
                 A_pk_prominences = peak_prominences(A_clipped, A_peaks)[0]
                 A_valley_widths = peak_widths(A_flipped, A_valleys, rel_height=0.01)
 
-                A_bounces[1][0] = np.where(A_filtrd[:int(A_peak_widths[2][0])] < A_lower_threshold)[0][-1]
+                A_bounces[1][0] = np.where(A_filtrd[int(A_valley_widths[0][0]/2):int(A_peak_widths[2][0])] > A_lower_threshold)[0][0]
                 A_bounces[2][0] = A_peak_widths[2][0]
                 for x in range(0, A_nr_peaks - 1):
                     A_bounces[1][2 * x + 1] = A_peak_widths[3][x]
@@ -181,7 +181,7 @@ def handle_request(c):
                     A_bounces[1][2 * x] = A_valley_widths[3][x - 1]
                     A_bounces[2][2 * x] = A_peak_widths[2][x]
                 A_bounces[1][A_nr_peaks * 2 - 1] = A_peak_widths[3][A_nr_peaks - 1]
-                A_bounces[2][A_nr_peaks * 2 - 1] = int(A_peak_widths[3][A_nr_peaks - 1]) + np.where(A_filtrd[int(A_peak_widths[3][A_nr_peaks - 1]):] > A_lower_threshold)[0][0]
+                A_bounces[2][A_nr_peaks * 2 - 1] = int(A_peak_widths[3][A_nr_peaks - 1]) + np.where(A_filtrd[int(A_peak_widths[3][A_nr_peaks - 1]):int(A_peak_widths[3][A_nr_peaks - 1] + A_valley_widths[0][-1]/2)] < A_lower_threshold)[0][-1]
                 for x in range(0, A_nr_peaks * 2):
                     A_bounces[0][x] = A_bounces[2][x] - A_bounces[1][x]
 
@@ -200,7 +200,7 @@ def handle_request(c):
                 B_pk_prominences = peak_prominences(B_clipped, B_peaks)[0]
                 B_valley_widths = peak_widths(B_flipped, B_valleys, rel_height=0.01)
 
-                B_bounces[1][0] = np.where(B_filtrd[:int(B_peak_widths[2][0])] < B_lower_threshold)[0][-1]
+                B_bounces[1][0] = np.where(B_filtrd[int(B_valley_widths[0][0]/2):int(B_peak_widths[2][0])] > B_lower_threshold)[0][0]
                 B_bounces[2][0] = B_peak_widths[2][0]
                 for x in range(0, B_nr_peaks - 1):
                     B_bounces[1][2 * x + 1] = B_peak_widths[3][x]
@@ -209,7 +209,7 @@ def handle_request(c):
                     B_bounces[1][2 * x] = B_valley_widths[3][x - 1]
                     B_bounces[2][2 * x] = B_peak_widths[2][x]
                 B_bounces[1][B_nr_peaks * 2 - 1] = B_peak_widths[3][B_nr_peaks - 1]
-                B_bounces[2][B_nr_peaks * 2 - 1] = int(B_peak_widths[3][B_nr_peaks - 1]) + np.where(B_filtrd[int(B_peak_widths[3][B_nr_peaks - 1]):] < B_lower_threshold)[0][0]
+                B_bounces[2][B_nr_peaks * 2 - 1] = int(B_peak_widths[3][B_nr_peaks - 1]) + np.where(B_filtrd[int(B_peak_widths[3][B_nr_peaks - 1]):int(B_peak_widths[3][B_nr_peaks - 1] + B_valley_widths[0][-1]/2)] < B_lower_threshold)[0][-1]
                 for x in range(0, B_nr_peaks * 2):
                     B_bounces[0][x] = B_bounces[2][x] - B_bounces[1][x]
 
@@ -217,6 +217,11 @@ def handle_request(c):
             print(A_bounces)
             print("A Bounces in milliseconds:")
             print(samples_to_seconds(A_bounces)*1000)
+
+            print("B Bounces in samples:")
+            print(B_bounces)
+            print("B Bounces in milliseconds:")
+            print(samples_to_seconds(B_bounces)*1000)
 
             # Save values
             data = {
@@ -582,7 +587,7 @@ while True:
 
     match request:
             case "START AQ":
-                
+
                 handle_request(c_sock)  
 
             case _:
