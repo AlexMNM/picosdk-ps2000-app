@@ -254,8 +254,8 @@ def handle_request(c):
             results = json.dumps(data)
             c.send(b'ACQUISITION RESULTS,' + results.encode())
 
-
-            fig, axs = plt.subplots(4)
+            
+            axs.clear()
             _, units = determine_time_unit(nsamples * sample_interval)
             interval = samples_to_seconds(nsamples) * 1000
             n = 0
@@ -506,6 +506,10 @@ class StreamingDevice:
         ps2000.ps2000_stop(self.device.handle)
 
 
+fig, axs = plt.subplots(4)
+plt.ion()
+plt.show()  
+
 # Setup
 #first_edge = 'A' # A or B, depending on the direction of rotation
 expected_pulses = 8 # how many pulses should the encoder have in one turn / second
@@ -537,6 +541,8 @@ while True:
     c_sock, partner = l_server.accept() 
     print(f"[+] Connection established from: {partner[0]}:{partner[1]} | Socket: {c_sock}")
     print(f"[+] Accepted connection from: {partner[0]}:{partner[1]}")
+
+
     
     try: 
         request = c_sock.recv(2048).decode()
@@ -549,9 +555,7 @@ while True:
                 #client_handler = threading.Thread(target=handle_request, args=(c_sock, ))
                 #client_handler.start()
                 #client_handler.join()
-                plt.ion()
                 handle_request(c_sock)
-                plt.show()  
             case _:
                 print("Unknown request received")
                 
