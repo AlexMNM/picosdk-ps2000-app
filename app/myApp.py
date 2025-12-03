@@ -582,9 +582,7 @@ while True:
 
     match request:
             case "START AQ":
-                for ax in axs:
-                    ax.clear()
-
+                
                 handle_request(c_sock)  
 
             case _:
