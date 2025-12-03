@@ -553,7 +553,9 @@ while True:
                 #client_handler.join()
                 plt.close()
                 handle_request(c_sock)  
+                plt.int()
                 plt.show()  
+                plt.pause(0.01)
             case _:
                 print("Unknown request received")
                 
