@@ -58,7 +58,7 @@ def norm_to_mv(normed_val, mean, std):
 def mv_to_norm(mv_val, mean, std):
     return (mv_val - mean) / std
 
-def handle_request(c): 
+def handle_request(c, req, b_sock, b_addr): 
         #buffer = c.socket.recv(1024)
        # try:
             #buffer.data 
@@ -68,10 +68,11 @@ def handle_request(c):
             #settings = buffer.data
             #picoDevice.set_trigger(leading_wave= settings.leading_wave)
             #picoDevice.set_samples(expected_pulses= settings.pulses)
-            response = "ACQUISITION STARTED"
-            c.send(response.encode())
+            response = ['PICO','AqStarted']
+            c.send(json.dumps(response).encode())
             print("Gathering...")
 
+            picoDevice.set_samples(req[2].expectedPulses)
             picoDevice.run_streaming()
             valuesA, valuesB, trigger_start = picoDevice.gather()
             picoDevice.stop()
@@ -81,7 +82,7 @@ def handle_request(c):
             print('Triggered at: {} samples'.format(trigger_start))
 
             #results = data['signal_A'], data['signal_B']
-            c.send("ACQUISITION COMPLETED".encode())
+            #c.send("ACQUISITION COMPLETED".encode())
             #c.send(results.encode())
 
             # Data processing
@@ -260,9 +261,11 @@ def handle_request(c):
 
             # Send response
             del data["raw_data"]
-            results = json.dumps(data)
-            c.send(b'ACQUISITION RESULTS,' + results.encode())
-
+            #results = json.dumps(data)
+            #c.send(b'ACQUISITION RESULTS,' + results.encode())
+            msg = ['PICO', 'AqResults', data]
+            b_sock.connect(b_addr)
+            b_sock.sendall(json.dumps(msg).encode())
             
             #global fig, axs
 
@@ -274,93 +277,73 @@ def handle_request(c):
 
             axs[n].set_xlabel('time/{}'.format(units))
             axs[n].hlines(A_mid, 0, interval, linestyle='dotted')
-            plt.pause(0.001)
             for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
                 s = samples_to_seconds(s) * 1000
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].text(x1, A_mid - 0.2 + 0.3 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                 axs[n].hlines(A_mid, x1, x2, color = 'red')
-            plt.pause(0.001)
             axs[n].hlines(A_upper_threshold, 0, interval, color = 'green')
             axs[n].hlines(A_lower_threshold, 0, interval, color = 'green')
             axs[n].plot(np.linspace(0, interval, nsamples), A_filtrd)
-            plt.pause(0.001)
             n += 1
 
 
             axs[n].set_xlabel('time/{}'.format(units))
             axs[n].plot(np.linspace(0, interval, nsamples), A_clipped)
-            plt.pause(0.001)
             if A_nr_peaks > 0:
                 axs[n].plot(samples_to_seconds(A_peaks)*1000, A_clipped[A_peaks], 'x')
-                plt.pause(0.001)
                 axs[n].plot(samples_to_seconds(A_valleys)*1000, A_clipped[A_valleys], 'x')
-                plt.pause(0.001)
                 for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
                     s = samples_to_seconds(s) * 1000
                     x1 = samples_to_seconds(x1) * 1000
                     x2 = samples_to_seconds(x2) * 1000
                     axs[n].text(x1, A_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                     axs[n].hlines(A_mid, x1, x2, color = 'red')
-                plt.pause(0.001)
                 for x1, x2 in zip(A_peak_widths[2], A_peak_widths[3]):
                     x1 = samples_to_seconds(x1) * 1000
                     x2 = samples_to_seconds(x2) * 1000
                     axs[n].hlines(A_mid + 0.1, x1, x2, color='orange')
-                plt.pause(0.001)
                 for x1, x2 in zip(A_valley_widths[2], A_valley_widths[3]):
                     x1 = samples_to_seconds(x1) * 1000
                     x2 = samples_to_seconds(x2) * 1000
                     axs[n].hlines(A_mid - 0.1, x1, x2, color='green') 
-                plt.pause(0.001)
             n += 1
 
 
             axs[n].set_xlabel('time/{}'.format(units))
             axs[n].hlines(B_mid, 0, interval, linestyle='dotted')
-            plt.pause(0.001)
             for i, (x1, x2, s) in enumerate(zip(B_bounces[1], B_bounces[2], B_bounces[0])):
                 s = samples_to_seconds(s) * 1000
                 x1 = samples_to_seconds(x1) * 1000
                 x2 = samples_to_seconds(x2) * 1000
                 axs[n].text(x1, B_mid - 0.2 + 0.3 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                 axs[n].hlines(B_mid, x1, x2, color = 'red')
-            plt.pause(0.001)
             axs[n].hlines(B_upper_threshold, 0, interval, color = 'green')
-            plt.pause(0.001)
             axs[n].hlines(B_lower_threshold, 0, interval, color = 'green')
-            plt.pause(0.001)
             axs[n].plot(np.linspace(0, interval, nsamples), B_filtrd)
-            plt.pause(0.001)
             n += 1
 
 
             axs[n].set_xlabel('time/{}'.format(units))
             axs[n].plot(np.linspace(0, interval, nsamples), B_clipped)
-            plt.pause(0.001)
             if B_nr_peaks > 0:
                 axs[n].plot(samples_to_seconds(B_peaks)*1000, B_clipped[B_peaks], 'x')
-                plt.pause(0.001)
                 axs[n].plot(samples_to_seconds(B_valleys)*1000, B_clipped[B_valleys], 'x')
-                plt.pause(0.001)
                 for i, (x1, x2, s) in enumerate(zip(B_bounces[1], B_bounces[2], B_bounces[0])):
                     s = samples_to_seconds(s) * 1000
                     x1 = samples_to_seconds(x1) * 1000
                     x2 = samples_to_seconds(x2) * 1000
                     axs[n].text(x1, B_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
                     axs[n].hlines(B_mid, x1, x2, color = 'red')
-                plt.pause(0.001)
                 for x1, x2 in zip(B_peak_widths[2], B_peak_widths[3]):
                     x1 = samples_to_seconds(x1) * 1000
                     x2 = samples_to_seconds(x2) * 1000
                     axs[n].hlines(B_mid + 0.1, x1, x2, color='orange')
-                plt.pause(0.001)
                 for x1, x2 in zip(B_valley_widths[2], B_valley_widths[3]):
                     x1 = samples_to_seconds(x1) * 1000
                     x2 = samples_to_seconds(x2) * 1000
                     axs[n].hlines(B_mid - 0.1, x1, x2, color='green') 
-                plt.pause(0.001)
             n += 1
 
 
@@ -557,9 +540,13 @@ picoDevice = StreamingDevice(samples, sample_interval, potential_range=ps2000.PS
 
 # Setup server
 bind_ip = '' 
+broker_port = 1881
 bind_port = 8000
 l_server = socket.create_server((bind_ip, bind_port))
 print(socket.gethostname())
+
+brocker_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+brocker_addr = ('',broker_port)
 
 # we tell the server to start listening with a maximum backlog of connections set to 5
 l_server.listen(5) 
@@ -580,15 +567,15 @@ while True:
 
     
     try: 
-        request = c_sock.recv(2048).decode()
+        request = json.loads(c_sock.recv(2048).decode())
         print(f"[+] Recieved: {request}")
     except ConnectionResetError: 
         continue
 
-    match request:
-            case "START AQ":
+    match request[1]:
+            case "StartAq":
 
-                handle_request(c_sock)  
+                handle_request(c_sock, request, brocker_sock, brocker_addr)  
 
             case _:
                 print("Unknown request received")
