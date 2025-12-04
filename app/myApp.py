@@ -173,7 +173,7 @@ def handle_request(c, req, b_sock, b_addr):
                 A_pk_prominences = peak_prominences(A_clipped, A_peaks)[0]
                 A_valley_widths = peak_widths(A_flipped, A_valleys, rel_height=0.01)
 
-                A_bounces[1][0] = np.where(np.where(A_filtrd[:int(A_peak_widths[2][0])] > A_lower_threshold)[0] > A_peak_widths[2][0] / 2)[0][0]
+                A_bounces[1][0] = np.where(A_filtrd[:int(A_peak_widths[2][0])] > A_lower_threshold)[0][0]
                 A_bounces[2][0] = A_peak_widths[2][0]
                 for x in range(0, A_nr_peaks - 1):
                     A_bounces[1][2 * x + 1] = A_peak_widths[3][x]
@@ -242,8 +242,8 @@ def handle_request(c, req, b_sock, b_addr):
                 },
 
                 "results": {
-                    "A_bounces": A_bounces.tolist(),
-                    "B_bounces": B_bounces.tolist(),
+                    "A_bounces": (samples_to_seconds(A_bounces)*1000).tolist(),
+                    "B_bounces": (samples_to_seconds(B_bounces)*1000).tolist(),
                     "A_frequency": freq_A,
                     "B_frequency": freq_B,
                     "A_period": period_A, 
