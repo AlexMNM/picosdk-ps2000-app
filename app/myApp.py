@@ -264,8 +264,7 @@ def handle_request(c, req, b_sock, b_addr):
             #results = json.dumps(data)
             #c.send(b'ACQUISITION RESULTS,' + results.encode())
             msg = ['PICO', 'AqResults', data]
-            b_sock.connect(b_addr)
-            b_sock.sendall(json.dumps(msg).encode())
+            c.sendall(json.dumps(msg).encode())
             
             #global fig, axs
 
