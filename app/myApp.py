@@ -567,7 +567,9 @@ while True:
 
     
     try: 
-        request = json.loads(c_sock.recv(2048).decode())
+        raw = c_sock.recv(2048).decode()
+        print(raw)
+        request = json.loads(raw)
         print(f"[+] Recieved: {request}")
     except ConnectionResetError: 
         continue
