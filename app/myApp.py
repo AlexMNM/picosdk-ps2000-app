@@ -172,7 +172,7 @@ def handle_request(c):
                 A_pk_prominences = peak_prominences(A_clipped, A_peaks)[0]
                 A_valley_widths = peak_widths(A_flipped, A_valleys, rel_height=0.01)
 
-                A_bounces[1][0] = np.asarray(A_filtrd[int(A_peak_widths[2][0] / 2):int(A_peak_widths[2][0])] > A_lower_threshold).nonzero()[0][0]
+                A_bounces[1][0] = np.asarray(A_filtrd > A_lower_threshold)[int(A_peak_widths[2][0] / 2):int(A_peak_widths[2][0])].nonzero()[0][0]
                 A_bounces[2][0] = A_peak_widths[2][0]
                 for x in range(0, A_nr_peaks - 1):
                     A_bounces[1][2 * x + 1] = A_peak_widths[3][x]
