@@ -549,9 +549,9 @@ brocker_addr = ('',broker_port)
 l_server.listen(5) 
 print(f"[+] Listening on port {bind_ip} : {bind_port}")  
 
+
 plt.ion()
 fig, axs = plt.subplots(4) 
-plt.show()
 
 # main loop
 while True:
