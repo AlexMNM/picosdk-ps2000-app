@@ -267,7 +267,8 @@ def handle_request(c, req, b_sock, b_addr):
             c.sendall(json.dumps(msg).encode())
             
             global fig, axs
-            axs.clear()
+            for ax in axs:
+                ax.clear()
             _, units = determine_time_unit(nsamples * sample_interval)
             interval = samples_to_seconds(nsamples) * 1000
             n = 0
