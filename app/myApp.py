@@ -267,10 +267,10 @@ def handle_request(c, req, b_sock, b_addr):
             c.sendall(json.dumps(msg).encode())
             
             global fig, axs
+            axs.clear()
             _, units = determine_time_unit(nsamples * sample_interval)
             interval = samples_to_seconds(nsamples) * 1000
             n = 0
-
             axs[n].set_xlabel('time/{}'.format(units))
             axs[n].hlines(A_mid, 0, interval, linestyle='dotted')
             for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
@@ -548,9 +548,9 @@ brocker_addr = ('',broker_port)
 l_server.listen(5) 
 print(f"[+] Listening on port {bind_ip} : {bind_port}")  
 
-plt.ioff()
+plt.ion()
 fig, axs = plt.subplots(4) 
-plt.show(block=False)
+plt.show()
 
 # main loop
 while True:
