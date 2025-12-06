@@ -404,7 +404,7 @@ def handle_request(c, req, b_sock, b_addr):
             axs[n].plot(A_grd, color='green')
             n += 1 """
 
-            plt.show()
+            plt.pause(1.0)
             
     #except:
     #    response = f"[+] ERROR STARTING ACQUISITION DUE TO MISSING DATA"
