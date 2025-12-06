@@ -550,6 +550,7 @@ print(f"[+] Listening on port {bind_ip} : {bind_port}")
 
 plt.ioff()
 fig, axs = plt.subplots(4) 
+plt.show()
 
 # main loop
 while True:
