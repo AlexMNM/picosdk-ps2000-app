@@ -266,10 +266,7 @@ def handle_request(c, req, b_sock, b_addr):
             msg = ['PICO', 'AqResults', data]
             c.sendall(json.dumps(msg).encode())
             
-            #global fig, axs
-
-            fig, axs = plt.subplots(4)
-
+            global fig, axs
             _, units = determine_time_unit(nsamples * sample_interval)
             interval = samples_to_seconds(nsamples) * 1000
             n = 0
@@ -404,7 +401,7 @@ def handle_request(c, req, b_sock, b_addr):
             axs[n].plot(A_grd, color='green')
             n += 1 """
 
-            plt.pause(1.0)
+            plt.draw()
             
     #except:
     #    response = f"[+] ERROR STARTING ACQUISITION DUE TO MISSING DATA"
@@ -551,10 +548,8 @@ brocker_addr = ('',broker_port)
 l_server.listen(5) 
 print(f"[+] Listening on port {bind_ip} : {bind_port}")  
 
-#fig, axs = plt.subplots(4)
-#plt.ion()
-#plt.show()
-#plt.pause(0.001) 
+plt.ioff()
+fig, axs = plt.subplots(4) 
 
 # main loop
 while True:
