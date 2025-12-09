@@ -175,14 +175,14 @@ def handle_request(c, req, b_sock, b_addr):
 
                 A_bounces[1][0] = np.where(A_filtrd[:int(A_peak_widths[2][0])] > A_lower_threshold)[0][0]
                 A_bounces[2][0] = A_peak_widths[2][0]
-                for x in range(0, A_nr_peaks - 1):
+                for x in range(0, min(A_nr_peaks - 1, len(A_valley_widths))):
                     A_bounces[1][2 * x + 1] = A_peak_widths[3][x]
                     A_bounces[2][2 * x + 1] = A_valley_widths[2][x]
-                for x in range(1, A_nr_peaks):
+                for x in range(1, min(A_nr_peaks, len(A_valley_widths) + 1)):
                     A_bounces[1][2 * x] = A_valley_widths[3][x - 1]
                     A_bounces[2][2 * x] = A_peak_widths[2][x]
                 A_bounces[1][A_nr_peaks * 2 - 1] = A_peak_widths[3][A_nr_peaks - 1]
-                A_bounces[2][A_nr_peaks * 2 - 1] = int(A_peak_widths[3][A_nr_peaks - 1]) + np.where(A_filtrd[int(A_peak_widths[3][A_nr_peaks - 1]):(int(A_peak_widths[3][A_nr_peaks - 1] + A_valley_widths[0][-1]/2))] > A_lower_threshold)[0][-1]
+                A_bounces[2][A_nr_peaks * 2 - 1] = int(A_peak_widths[3][A_nr_peaks - 1]) + np.where(A_filtrd[int(A_peak_widths[3][A_nr_peaks - 1]):(int(A_peak_widths[3][A_nr_peaks - 1] + A_peak_widths[0][-1]/2))] > A_lower_threshold)[0][-1]
                 for x in range(0, A_nr_peaks * 2):
                     A_bounces[0][x] = A_bounces[2][x] - A_bounces[1][x]
 
@@ -203,14 +203,14 @@ def handle_request(c, req, b_sock, b_addr):
 
                 B_bounces[1][0] = np.where(B_filtrd[:int(B_peak_widths[2][0])] > B_lower_threshold)[0][0]
                 B_bounces[2][0] = B_peak_widths[2][0]
-                for x in range(0, B_nr_peaks - 1):
+                for x in range(0, min(B_nr_peaks - 1, len(B_valley_widths))):
                     B_bounces[1][2 * x + 1] = B_peak_widths[3][x]
                     B_bounces[2][2 * x + 1] = B_valley_widths[2][x]
-                for x in range(1, B_nr_peaks):
+                for x in range(1, min(B_nr_peaks, len(B_valley_widths) + 1)):
                     B_bounces[1][2 * x] = B_valley_widths[3][x - 1]
                     B_bounces[2][2 * x] = B_peak_widths[2][x]
                 B_bounces[1][B_nr_peaks * 2 - 1] = B_peak_widths[3][B_nr_peaks - 1]
-                B_bounces[2][B_nr_peaks * 2 - 1] = int(B_peak_widths[3][B_nr_peaks - 1]) + np.where(B_filtrd[int(B_peak_widths[3][B_nr_peaks - 1]):int(B_peak_widths[3][B_nr_peaks - 1] + B_valley_widths[0][-1]/2)] > B_lower_threshold)[0][-1]
+                B_bounces[2][B_nr_peaks * 2 - 1] = int(B_peak_widths[3][B_nr_peaks - 1]) + np.where(B_filtrd[int(B_peak_widths[3][B_nr_peaks - 1]):int(B_peak_widths[3][B_nr_peaks - 1] + B_peak_widths[0][-1]/2)] > B_lower_threshold)[0][-1]
                 for x in range(0, B_nr_peaks * 2):
                     B_bounces[0][x] = B_bounces[2][x] - B_bounces[1][x]
 
@@ -261,14 +261,16 @@ def handle_request(c, req, b_sock, b_addr):
 
             # Send response
             del data["raw_data"]
-            #results = json.dumps(data)
-            #c.send(b'ACQUISITION RESULTS,' + results.encode())
             msg = ['PICO', 'AqResults', data]
-            c.sendall(json.dumps(msg).encode())
+            c.send(json.dumps(msg).encode())
+            
             
             global fig, axs
             for ax in axs:
                 ax.clear()
+
+            #fig, axs = plt.subplots(4) 
+
             _, units = determine_time_unit(nsamples * sample_interval)
             interval = samples_to_seconds(nsamples) * 1000
             n = 0
@@ -402,7 +404,8 @@ def handle_request(c, req, b_sock, b_addr):
             axs[n].plot(A_grd, color='green')
             n += 1 """
 
-            plt.pause(0.01)
+            #plt.pause(0.01)           
+            
             
     #except:
     #    response = f"[+] ERROR STARTING ACQUISITION DUE TO MISSING DATA"
@@ -431,7 +434,7 @@ class StreamingDevice:
         threshold = int(32_767 / 2) # about half the potential range in ADC values (-32_767 -> +32_767)
         direction = TriggerDirection.PS2000_RISING
         delay = 0 # percent -100% -> +100%
-        auto_trigger = 10_000 # milliseconds
+        auto_trigger = 1_000 # milliseconds
         res = ps2000.ps2000_set_trigger(
             self.device.handle, 
             ps2000.PICO_CHANNEL[leading_wave], 
@@ -550,7 +553,8 @@ l_server.listen(5)
 print(f"[+] Listening on port {bind_ip} : {bind_port}")  
 
 
-plt.ion()
+#plt.show()
+#plt.ion()
 fig, axs = plt.subplots(4) 
 
 # main loop
@@ -579,6 +583,8 @@ while True:
                 print("Unknown request received")
                 
     c_sock.close()  
+    
+    #plt.pause(2)
     #Close device
     #picoDevice.close()
 
