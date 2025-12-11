@@ -72,7 +72,7 @@ def handle_request(c, req, b_sock, b_addr):
             c.send(json.dumps(response).encode())
             print("Gathering...")
 
-            picoDevice.set_samples(req[2][2][0])
+            picoDevice.set_samples(req[2])
             picoDevice.run_streaming()
             valuesA, valuesB, trigger_start = picoDevice.gather()
             picoDevice.stop()
