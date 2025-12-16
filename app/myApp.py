@@ -264,6 +264,10 @@ def handle_request(c, req, b_sock, b_addr):
             msg = ['PICO', 'AqResults', data]
             c.send(json.dumps(msg).encode())
             
+            filename = "D:/appcache/ps2000/result_file" + ".json"
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            with open(filename, 'w') as f:
+                json.dump(data, f)
             
             global fig, axs
             for ax in axs:
@@ -404,7 +408,7 @@ def handle_request(c, req, b_sock, b_addr):
             axs[n].plot(A_grd, color='green')
             n += 1 """
 
-            #plt.pause(0.01)           
+            plt.pause(0.01)           
             
             
     #except:
@@ -434,7 +438,7 @@ class StreamingDevice:
         threshold = int(32_767 / 2) # about half the potential range in ADC values (-32_767 -> +32_767)
         direction = TriggerDirection.PS2000_RISING
         delay = 0 # percent -100% -> +100%
-        auto_trigger = 1_000 # milliseconds
+        auto_trigger = 2_000 # milliseconds
         res = ps2000.ps2000_set_trigger(
             self.device.handle, 
             ps2000.PICO_CHANNEL[leading_wave], 
@@ -553,8 +557,8 @@ l_server.listen(5)
 print(f"[+] Listening on port {bind_ip} : {bind_port}")  
 
 
-#plt.show()
-#plt.ion()
+plt.show()
+plt.ion()
 fig, axs = plt.subplots(4) 
 
 # main loop
