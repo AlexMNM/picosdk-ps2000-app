@@ -259,15 +259,17 @@ def handle_request(c, req, b_sock, b_addr):
             with open(filename, 'w') as f:
                 json.dump(data, f)
 
-            # Send response
+
             del data["raw_data"]
-            msg = ['PICO', 'AqResults', data]
-            c.send(json.dumps(msg).encode())
-            
             filename = "D:/appcache/ps2000/result_file" + ".json"
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             with open(filename, 'w') as f:
                 json.dump(data, f)
+
+            # Send response
+            msg = ['PICO', 'AqResults']
+            c.send(json.dumps(msg).encode())
+
             
             global fig, axs
             for ax in axs:
