@@ -11,8 +11,8 @@ import logging
 # Import packages
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import correlate, find_peaks, peak_widths, peak_prominences, resample
-from scipy import ndimage
+from scipy.signal import correlate, find_peaks, peak_widths, peak_prominences, resample, decimate
+from scipy import ndimage, fft
 
 
 logger = logging.getLogger(__name__)
@@ -45,32 +45,55 @@ def norm_to_mv(normed_val, mean, std):
 def mv_to_norm(mv_val, mean, std):
     return (mv_val - mean) / std
 
+def resize_fast(arr):
+    re = fft.prev_fast_len(len(arr))
+    return arr[:re-1], re
+
 def normalize(signal):
     mean = signal.mean()
     std= signal.std()
     return (signal - mean)/std, mean, std
 
-class Interval:
-    def __init__(self, samp_count, samp_rate, unit=1e-3): # default unit: milliseconds
-        self.sec = samp_count * samp_rate * unit 
-        self.ms = self.sec * 1e3
+class Duration:
+    def __init__(self, t, unit_exp=-3): # default unit: milliseconds
+        self.ns = int(t * 10**(9+unit_exp))
+        self.mus = self.ns*1e-3
+        self.ms = self.ns*1e-6
+        self.s = self.ns*1e-9
+class Wave:
+    def __init__(self, y, time, t_exp=-9):
+        if isinstance(y, list):
+            self.y = np.array(y)
+        elif isinstance(y, np.ndarray | np.generic):
+            self.y = y
+        self.n = self.y.size
+        if isinstance(time, float | int):
+            self.x = np.linspace(0, (self.n-1)*time, self.n)
+        elif isinstance(time, list):
+            self.x = np.array(time)
+        elif isinstance(time, np.ndarray | np.generic):
+            self.x = time
+        self.tx = t_exp
+        self.dt = Duration(self.x[1], unit_exp=self.tx)
+        self.interval = Duration(self.x[-1], unit_exp=self.tx)
+        
 
 
 filename = input("Drag file here:")
 with open(filename, 'r') as f:
     data = json.load(f)
 
-raw_A, raw_B = data["raw_data"]["signal_B"], data["raw_data"]["signal_A"]
-samp_rate, count = data["setup"]["sample_interval"], data["setup"]["samples"]
+decimate_factor = 10
 
-resampling_factor = 1/10
+dt = data["setup"]["sample_interval"]
+a_wave = Wave(decimate(resize_fast(data["raw_data"]["signal_A"])[0], decimate_factor, zero_phase=True), dt * decimate_factor)
+b_wave = Wave(decimate(resize_fast(data["raw_data"]["signal_B"])[0], decimate_factor, zero_phase=True), dt * decimate_factor)
 
-# Make np.array
-A_filtrd, tist_ms = resample(np.array(raw_A), int(count * resampling_factor), [0, samp_rate * 1e-6]) 
-B_filtrd = resample(np.array(raw_B), int(count * resampling_factor))
+A_filtrd = a_wave.y
+B_filtrd = b_wave.y
 
-nsamples = A_filtrd.size
-interval = Interval(nsamples, tist_ms[1])
+nsamples = a_wave.n
+interval = a_wave.interval
 
 # Normalize data
 A_norm, A_mean, A_std = normalize(A_filtrd)
@@ -78,11 +101,11 @@ B_norm, B_mean, B_std = normalize(B_filtrd)
 
 # Frequency and period
 fft_A = np.fft.rfft(A_norm, norm="ortho")
-freq_A = abs(fft_A).argmax() * interval.sec
+freq_A = abs(fft_A).argmax() * interval.s
 period_A = 1 / freq_A
 
 fft_B = np.fft.rfft(B_norm, norm="ortho")
-freq_B = abs(fft_A).argmax() * interval.sec
+freq_B = abs(fft_A).argmax() * interval.s
 period_B = 1 / freq_B
 
 print(f'Recovered frequency: A {freq_A} Hz, B {freq_B} Hz')
@@ -91,7 +114,7 @@ print(f'Recovered period: A {period_A * 1e3} ms, B {period_B * 1e3} ms')
 # Phase
 xcorr = correlate(A_norm, B_norm)
 dt = np.arange(1-nsamples ,nsamples)
-recovered_timeshift = samples_to_seconds(dt[xcorr.argmax()], tist_ms[1], 1e-3) * (360 / period_A)
+recovered_timeshift = (dt[xcorr.argmax()] * a_wave.dt.s) * (360 / period_A)
 print('Recovered offset: {} degrees'.format(recovered_timeshift))
 
 
@@ -128,13 +151,19 @@ def clip(sig):
     span = up_thresh - low_thresh
     return np.clip(sig, low_thresh, up_thresh), midpoint, span
 
-def peaks(sig, period):
+def peaks_valleys(sig, period):
     clipped, mid, span = clip(sig)
+    flipped = 2 * mid - clipped
     peaks, _ = find_peaks(clipped, distance=period*0.6, height=(mid, mid + span), prominence=(0.5*span), plateau_size=period*0.25)
-    return peaks
+    valleys, _ = find_peaks(flipped, distance=period*0.6, height=(mid, mid + span), prominence=(0.5*span), plateau_size=period*0.25)
+    return peaks, valleys, clipped, flipped, mid, span
 
-print('Test peaks: {}'.format(peaks(A_filtrd, seconds_to_samples(period_A, tist_ms[1], 1e-3))))
 
+def bounces(sig, period):
+    peaks, valleys = peaks_valleys(sig, period)
+    pass
+
+'''
 A_max = np.max(A_filtrd)
 A_min = np.min(A_filtrd)
 B_max = np.max(B_filtrd) 
@@ -155,14 +184,21 @@ B_flipped = 2 * B_mid - B_clipped
 
 # Peaks
 A_peaks, _ = find_peaks(A_clipped, distance=seconds_to_samples(period_A * 0.6), height=(A_mid, A_mid + A_span), prominence= np.max(A_filtrd) - A_mid, plateau_size=seconds_to_samples(period_A * 0.25))
+
+'''
+
+A_peaks, A_valleys, A_clipped, A_flipped, A_mid, _ = peaks_valleys(A_filtrd, period_A/a_wave.dt.s)
+B_peaks, B_valleys, B_clipped, B_flipped, B_mid, _ = peaks_valleys(B_filtrd, period_A/a_wave.dt.s)
+A_lower_threshold = A_clipped.min()
+A_upper_threshold = A_clipped.max()
+B_lower_threshold = B_clipped.min()
+B_upper_threshold = B_clipped.max()
+
 A_nr_peaks = len(A_peaks)
 print('Nr. of peaks A: {}'.format(len(A_peaks)))
 
 A_bounces = np.empty((3, A_nr_peaks * 2))
 if A_nr_peaks > 0:
-    A_flipped[:A_peaks[0]].fill(A_lower_threshold)
-    A_flipped[A_peaks[-1]:].fill(A_lower_threshold)
-    A_valleys, _ = find_peaks(A_flipped, distance=seconds_to_samples(period_A * 0.6), height=(A_mid, A_mid + A_span), prominence= np.max(A_filtrd) - A_mid, plateau_size=seconds_to_samples(period_A * 0.25))
     A_peak_widths = peak_widths(A_clipped, A_peaks, rel_height=0.01)
     print('Widths of A [ms]: \n{}'.format(1000 * samples_to_seconds(A_peak_widths[0])))
     A_pk_prominences = peak_prominences(A_clipped, A_peaks)[0]
@@ -182,15 +218,12 @@ if A_nr_peaks > 0:
         A_bounces[0][x] = A_bounces[2][x] - A_bounces[1][x]
 
 
-B_peaks, _ = find_peaks(B_clipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
+
 B_nr_peaks = len(B_peaks)
 print('Nr. of peaks B: {}'.format(len(B_peaks)))
 
 B_bounces = np.empty((3, B_nr_peaks * 2))
 if B_nr_peaks > 0:
-    B_flipped[:B_peaks[0]].fill(B_lower_threshold)
-    B_flipped[B_peaks[-1]:].fill(B_lower_threshold)
-    B_valleys, _ = find_peaks(B_flipped, distance=seconds_to_samples(period_A * 0.6), height=(B_mid, B_mid + B_span), prominence= np.max(B_filtrd) - B_mid, plateau_size=seconds_to_samples(period_A * 0.25))
     B_peak_widths = peak_widths(B_clipped, B_peaks, rel_height=0.01)
     print('Widths of B [ms]: \n{}'.format(1000 * samples_to_seconds(B_peak_widths[0])))
     B_pk_prominences = peak_prominences(B_clipped, B_peaks)[0]
@@ -221,11 +254,17 @@ print(samples_to_seconds(B_bounces)*1000)
 
 
 
-fig, axs = plt.subplots(4) 
+fig, axs = plt.subplots(6) 
 
 _, units = 'ms'
 interval = interval.ms
 n = 0
+
+axs[n].plot(a_wave.x, A_filtrd)
+n += 1
+axs[n].plot(a_wave.y)
+n += 1
+
 axs[n].set_xlabel('time/{}'.format(units))
 axs[n].hlines(A_mid, 0, interval, linestyle='dotted')
 for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
@@ -272,7 +311,7 @@ for i, (x1, x2, s) in enumerate(zip(B_bounces[1], B_bounces[2], B_bounces[0])):
     axs[n].hlines(B_mid, x1, x2, color = 'red')
 axs[n].hlines(B_upper_threshold, 0, interval, color = 'green')
 axs[n].hlines(B_lower_threshold, 0, interval, color = 'green')
-axs[n].plot(np.linspace(0, interval, nsamples), B_filtrd)
+axs[n].plot(b_wave.x, b_wave.y)
 n += 1
 
 
