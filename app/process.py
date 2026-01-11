@@ -61,18 +61,18 @@ class Duration:
         self.ms = self.ns*1e-6
         self.s = self.ns*1e-9
 class Wave:
-    def __init__(self, y, time, t_exp=-9):
+    def __init__(self, y, dt, t_exp=-9):
         if isinstance(y, list):
             self.y = np.array(y)
         elif isinstance(y, np.ndarray | np.generic):
             self.y = y
         self.n = self.y.size
-        if isinstance(time, float | int):
-            self.x = np.linspace(0, (self.n-1)*time, self.n)
-        elif isinstance(time, list):
-            self.x = np.array(time)
-        elif isinstance(time, np.ndarray | np.generic):
-            self.x = time
+        if isinstance(dt, float | int):
+            self.x = np.linspace(0, (self.n-1)*dt, self.n)
+        elif isinstance(dt, list):
+            self.x = np.array(dt)
+        elif isinstance(dt, np.ndarray | np.generic):
+            self.x = dt
         self.tx = t_exp
         self.dt = Duration(self.x[1], unit_exp=self.tx)
         self.interval = Duration(self.x[-1], unit_exp=self.tx)
@@ -139,8 +139,8 @@ def get_thresholds(data):
     _gradient -= _gradient.mean()
     _gradient /= _gradient.std()
     _gradient[:int(_gradient.size/5)] = _gradient[-int(_gradient.size/5):] = 0
-    _lower = _sorted[np.where(_gradient >= 5*_gradient.std())[0][0]]
-    _upper = _sorted[np.where(_gradient >= 3*_gradient.std())[0][-1]]
+    _lower = _sorted[np.where(_gradient >= 6*_gradient.std())[0][0]]
+    _upper = _sorted[np.where(_gradient >= 5*_gradient.std())[0][-1]]
     return _lower, _upper, _gradient
 
 def clip(sig):
@@ -152,16 +152,39 @@ def clip(sig):
     return np.clip(sig, low_thresh, up_thresh), midpoint, span
 
 def peaks_valleys(sig, period):
+    R_H = 0.01
     clipped, mid, span = clip(sig)
     flipped = 2 * mid - clipped
-    peaks, _ = find_peaks(clipped, distance=period*0.6, height=(mid, mid + span), prominence=(0.5*span), plateau_size=period*0.25)
-    valleys, _ = find_peaks(flipped, distance=period*0.6, height=(mid, mid + span), prominence=(0.5*span), plateau_size=period*0.25)
-    return peaks, valleys, clipped, flipped, mid, span
+    p_res = find_peaks(clipped, distance=period*0.6, height=(mid, mid + span), prominence=(0.5*span), plateau_size=period*0.25, width=period*0.25, rel_height=R_H)
+    v_res = find_peaks(flipped, distance=period*0.6, height=(mid, mid + span), prominence=(0.5*span), plateau_size=period*0.25, width=period*0.25, rel_height=R_H)
+    return p_res, v_res, clipped, flipped, mid, span
 
 
-def bounces(sig, period):
-    peaks, valleys = peaks_valleys(sig, period)
-    pass
+def bounces(p, v, clipped):
+    peaks, p_prop = p
+    valleys, v_prop = v
+    p_cnt = len(peaks)
+    v_cnt = len(valleys)
+    b_cnt = 2 * p_cnt
+    bounces = (np.zeros(b_cnt),np.zeros(b_cnt),np.zeros(b_cnt)) # size, start, end
+    v_offs = 0 if peaks[0] < valleys[0] else -1
+    over_min = np.flatnonzero(clipped > clipped.min())
+    V = 0
+    ST = 1
+    ND = 2
+    for i in range(p_cnt):
+        left = 2 * i
+        right = 2 * i + 1
+        vir = i - v_offs
+        vil = vir - 1
+        bounces[ST][left] = v_prop['right_ips'][vil] if vil > -1 else over_min[0]
+        bounces[ND][left] = p_prop['left_ips'][i]
+        bounces[V][left] = bounces[ND][left] - bounces[ST][left]
+        bounces[ST][right] = p_prop['right_ips'][i]
+        bounces[ND][right] = v_prop['left_ips'][vir] if vir < v_cnt else over_min[-1]
+        bounces[V][right] = bounces[ND][right] - bounces[ST][right]
+        
+    return bounces
 
 '''
 A_max = np.max(A_filtrd)
@@ -187,37 +210,20 @@ A_peaks, _ = find_peaks(A_clipped, distance=seconds_to_samples(period_A * 0.6), 
 
 '''
 
-A_peaks, A_valleys, A_clipped, A_flipped, A_mid, _ = peaks_valleys(A_filtrd, period_A/a_wave.dt.s)
-B_peaks, B_valleys, B_clipped, B_flipped, B_mid, _ = peaks_valleys(B_filtrd, period_A/a_wave.dt.s)
+a_, a__, A_clipped, A_flipped, A_mid, _ = peaks_valleys(A_filtrd, period_A/a_wave.dt.s)
+(B_peaks, _), (B_valleys, _), B_clipped, B_flipped, B_mid, _ = peaks_valleys(B_filtrd, period_A/a_wave.dt.s)
 A_lower_threshold = A_clipped.min()
 A_upper_threshold = A_clipped.max()
 B_lower_threshold = B_clipped.min()
 B_upper_threshold = B_clipped.max()
 
+A_bounces = bounces(a_, a__, A_clipped)
+
+A_peaks = a_[0]
+A_valleys = a__[0]
+
 A_nr_peaks = len(A_peaks)
 print('Nr. of peaks A: {}'.format(len(A_peaks)))
-
-A_bounces = np.empty((3, A_nr_peaks * 2))
-if A_nr_peaks > 0:
-    A_peak_widths = peak_widths(A_clipped, A_peaks, rel_height=0.01)
-    print('Widths of A [ms]: \n{}'.format(1000 * samples_to_seconds(A_peak_widths[0])))
-    A_pk_prominences = peak_prominences(A_clipped, A_peaks)[0]
-    A_valley_widths = peak_widths(A_flipped, A_valleys, rel_height=0.01)
-
-    A_bounces[1][0] = np.where(A_filtrd[:int(A_peak_widths[2][0])] > A_lower_threshold)[0][0]
-    A_bounces[2][0] = A_peak_widths[2][0]
-    for x in range(0, min(A_nr_peaks - 1, len(A_valley_widths))):
-        A_bounces[1][2 * x + 1] = A_peak_widths[3][x]
-        A_bounces[2][2 * x + 1] = A_valley_widths[2][x]
-    for x in range(1, min(A_nr_peaks, len(A_valley_widths) + 1)):
-        A_bounces[1][2 * x] = A_valley_widths[3][x - 1]
-        A_bounces[2][2 * x] = A_peak_widths[2][x]
-    A_bounces[1][A_nr_peaks * 2 - 1] = A_peak_widths[3][A_nr_peaks - 1]
-    A_bounces[2][A_nr_peaks * 2 - 1] = int(A_peak_widths[3][A_nr_peaks - 1]) + np.where(A_filtrd[int(A_peak_widths[3][A_nr_peaks - 1]):(int(A_peak_widths[3][A_nr_peaks - 1] + A_peak_widths[0][-1]/2))] > A_lower_threshold)[0][-1]
-    for x in range(0, A_nr_peaks * 2):
-        A_bounces[0][x] = A_bounces[2][x] - A_bounces[1][x]
-
-
 
 B_nr_peaks = len(B_peaks)
 print('Nr. of peaks B: {}'.format(len(B_peaks)))
@@ -245,7 +251,7 @@ if B_nr_peaks > 0:
 print("A Bounces in samples:")
 print(A_bounces)
 print("A Bounces in milliseconds:")
-print(samples_to_seconds(A_bounces)*1000)
+print(samples_to_seconds(A_bounces[0])*1000)
 
 print("B Bounces in samples:")
 print(B_bounces)
@@ -256,21 +262,25 @@ print(samples_to_seconds(B_bounces)*1000)
 
 fig, axs = plt.subplots(6) 
 
+x = a_wave.x
+y = a_wave.y
+
 _, units = 'ms'
 interval = interval.ms
 n = 0
 
-axs[n].plot(a_wave.x, A_filtrd)
+axs[n].plot(x, y)
 n += 1
-axs[n].plot(a_wave.y)
+y = b_wave.y
+axs[n].plot(x, y)
 n += 1
 
 axs[n].set_xlabel('time/{}'.format(units))
 axs[n].hlines(A_mid, 0, interval, linestyle='dotted')
 for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
-    s = samples_to_seconds(s) * 1000
-    x1 = samples_to_seconds(x1) * 1000
-    x2 = samples_to_seconds(x2) * 1000
+    s = samples_to_seconds(s) * 10000
+    x1 = samples_to_seconds(x1) * 10000
+    x2 = samples_to_seconds(x2) * 10000
     axs[n].text(x1, A_mid - 0.2 + 0.3 * (i % 2), '{0:.2f} ms'.format(s), size='small')
     axs[n].hlines(A_mid, x1, x2, color = 'red')
 axs[n].hlines(A_upper_threshold, 0, interval, color = 'green')
@@ -280,23 +290,23 @@ n += 1
 
 
 axs[n].set_xlabel('time/{}'.format(units))
-axs[n].plot(np.linspace(0, interval, nsamples), A_clipped)
+axs[n].plot(A_clipped)
 if A_nr_peaks > 0:
-    axs[n].plot(samples_to_seconds(A_peaks)*1000, A_clipped[A_peaks], 'x')
-    axs[n].plot(samples_to_seconds(A_valleys)*1000, A_clipped[A_valleys], 'x')
+    axs[n].plot(A_peaks, A_clipped[A_peaks], 'x')
+    axs[n].plot(A_valleys, A_clipped[A_valleys], 'x')
     for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
-        s = samples_to_seconds(s) * 1000
-        x1 = samples_to_seconds(x1) * 1000
-        x2 = samples_to_seconds(x2) * 1000
+        s = s
+        x1 = x1
+        x2 = x2
         axs[n].text(x1, A_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
         axs[n].hlines(A_mid, x1, x2, color = 'red')
-    for x1, x2 in zip(A_peak_widths[2], A_peak_widths[3]):
-        x1 = samples_to_seconds(x1) * 1000
-        x2 = samples_to_seconds(x2) * 1000
+    for x1, x2 in zip(a_[1]['left_ips'], a_[1]['right_ips']):
+        x1 = x1
+        x2 = x2
         axs[n].hlines(A_mid + 0.1, x1, x2, color='orange')
-    for x1, x2 in zip(A_valley_widths[2], A_valley_widths[3]):
-        x1 = samples_to_seconds(x1) * 1000
-        x2 = samples_to_seconds(x2) * 1000
+    for x1, x2 in zip(a__[1]['left_ips'], a__[1]['right_ips']):
+        x1 = x1
+        x2 = x2
         axs[n].hlines(A_mid - 0.1, x1, x2, color='green') 
 n += 1
 
