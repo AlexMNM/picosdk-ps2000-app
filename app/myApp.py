@@ -21,6 +21,9 @@ from picosdk.ps2000 import ps2000
 from picosdk.functions import assert_pico2000_ok
 from picosdk.ctypes_wrapper import C_CALLBACK_FUNCTION_FACTORY
 
+# Import process
+from process import peaks_valleys
+
 
 logger = logging.getLogger(__name__)
 
