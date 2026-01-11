@@ -67,15 +67,14 @@ class Wave:
         elif isinstance(y, np.ndarray | np.generic):
             self.y = y
         self.n = self.y.size
-        if isinstance(dt, float | int):
-            self.x = np.linspace(0, (self.n-1)*dt, self.n)
-        elif isinstance(dt, list):
-            self.x = np.array(dt)
-        elif isinstance(dt, np.ndarray | np.generic):
-            self.x = dt
-        self.tx = t_exp
-        self.dt = Duration(self.x[1], unit_exp=self.tx)
-        self.interval = Duration(self.x[-1], unit_exp=self.tx)
+ 
+        self._dt = dt
+        self._xp = t_exp
+        self.dt = Duration(self._dt, unit_exp=self._xp)
+        self.x = np.linspace(0, (self.n-1) * self.dt.ms, self.n )
+        self.interval = Duration(self.dt.ms * self.n)
+
+    
         
 
 
@@ -88,6 +87,7 @@ decimate_factor = 10
 dt = data["setup"]["sample_interval"]
 a_wave = Wave(decimate(resize_fast(data["raw_data"]["signal_A"])[0], decimate_factor, zero_phase=True), dt * decimate_factor)
 b_wave = Wave(decimate(resize_fast(data["raw_data"]["signal_B"])[0], decimate_factor, zero_phase=True), dt * decimate_factor)
+
 
 A_filtrd = a_wave.y
 B_filtrd = b_wave.y
@@ -136,11 +136,13 @@ def extremes(sig):
 def get_thresholds(data):
     _sorted = ndimage.uniform_filter1d(sorted(data), 50)
     _gradient = np.gradient(_sorted)
-    _gradient -= _gradient.mean()
-    _gradient /= _gradient.std()
-    _gradient[:int(_gradient.size/5)] = _gradient[-int(_gradient.size/5):] = 0
-    _lower = _sorted[np.where(_gradient >= 6*_gradient.std())[0][0]]
-    _upper = _sorted[np.where(_gradient >= 5*_gradient.std())[0][-1]]
+    #_gradient -= _gradient.mean()
+    #_gradient /= _gradient.std()
+    _gradient[:int(_gradient.size/5)] = _gradient[-int(_gradient.size/5):] = _gradient.min()
+    _lower = _sorted[np.where(_gradient >= np.percentile(_gradient, 98.8))[0][0]]   # 6*_gradient.std()
+    _upper = _sorted[np.where(_gradient >= np.percentile(_gradient, 99.8))[0][-1]]  # 6*_gradient.std()
+    _lower = max(900, _lower)
+    _upper = min(9100, _upper)
     return _lower, _upper, _gradient
 
 def clip(sig):
@@ -155,8 +157,8 @@ def peaks_valleys(sig, period):
     R_H = 0.01
     clipped, mid, span = clip(sig)
     flipped = 2 * mid - clipped
-    p_res = find_peaks(clipped, distance=period*0.6, height=(mid, mid + span), prominence=(0.5*span), plateau_size=period*0.25, width=period*0.25, rel_height=R_H)
-    v_res = find_peaks(flipped, distance=period*0.6, height=(mid, mid + span), prominence=(0.5*span), plateau_size=period*0.25, width=period*0.25, rel_height=R_H)
+    p_res = find_peaks(clipped, distance=period*0.6, height=(mid, mid + span), prominence=0.4*span, plateau_size=period*0.25, width=period*0.25, rel_height=R_H)
+    v_res = find_peaks(flipped, height=(mid, mid + span), prominence=0.2*span, plateau_size=period*0.25, width=period*0.25, rel_height=R_H)
     return p_res, v_res, clipped, flipped, mid, span
 
 
@@ -167,22 +169,24 @@ def bounces(p, v, clipped):
     v_cnt = len(valleys)
     b_cnt = 2 * p_cnt
     bounces = (np.zeros(b_cnt),np.zeros(b_cnt),np.zeros(b_cnt)) # size, start, end
-    v_offs = 0 if peaks[0] < valleys[0] else -1
-    over_min = np.flatnonzero(clipped > clipped.min())
-    V = 0
-    ST = 1
-    ND = 2
-    for i in range(p_cnt):
-        left = 2 * i
-        right = 2 * i + 1
-        vir = i - v_offs
-        vil = vir - 1
-        bounces[ST][left] = v_prop['right_ips'][vil] if vil > -1 else over_min[0]
-        bounces[ND][left] = p_prop['left_ips'][i]
-        bounces[V][left] = bounces[ND][left] - bounces[ST][left]
-        bounces[ST][right] = p_prop['right_ips'][i]
-        bounces[ND][right] = v_prop['left_ips'][vir] if vir < v_cnt else over_min[-1]
-        bounces[V][right] = bounces[ND][right] - bounces[ST][right]
+    if p_cnt > 0:
+        first_v = valleys[0] if v_cnt > 0 else 0
+        v_offs = 0 if peaks[0] < first_v else -1
+        over_min = np.flatnonzero(clipped > clipped.min())
+        V = 0
+        ST = 1
+        ND = 2
+        for i in range(p_cnt):
+            left = 2 * i
+            right = 2 * i + 1
+            vir = i - v_offs
+            vil = vir - 1
+            bounces[ST][left] = v_prop['right_ips'][vil] if v_cnt > 0 and vil > -1 else over_min[0]
+            bounces[ND][left] = p_prop['left_ips'][i]
+            bounces[V][left] = bounces[ND][left] - bounces[ST][left]
+            bounces[ST][right] = p_prop['right_ips'][i]
+            bounces[ND][right] = v_prop['left_ips'][vir] if v_cnt > 0 and vir < v_cnt else over_min[-1]
+            bounces[V][right] = bounces[ND][right] - bounces[ST][right]
         
     return bounces
 
@@ -210,140 +214,134 @@ A_peaks, _ = find_peaks(A_clipped, distance=seconds_to_samples(period_A * 0.6), 
 
 '''
 
-a_, a__, A_clipped, A_flipped, A_mid, _ = peaks_valleys(A_filtrd, period_A/a_wave.dt.s)
-(B_peaks, _), (B_valleys, _), B_clipped, B_flipped, B_mid, _ = peaks_valleys(B_filtrd, period_A/a_wave.dt.s)
+A_pk, A_vly, A_clipped, A_flipped, A_mid, _ = peaks_valleys(A_filtrd, period_A/a_wave.dt.s)
+A_bounces = bounces(A_pk, A_vly, A_clipped)
 A_lower_threshold = A_clipped.min()
 A_upper_threshold = A_clipped.max()
+
+
+B_pk, B_vly, B_clipped, B_flipped, B_mid, _ = peaks_valleys(B_filtrd, period_A/b_wave.dt.s)
+B_bounces = bounces(B_pk, B_vly, B_clipped)
 B_lower_threshold = B_clipped.min()
 B_upper_threshold = B_clipped.max()
 
-A_bounces = bounces(a_, a__, A_clipped)
-
-A_peaks = a_[0]
-A_valleys = a__[0]
-
-A_nr_peaks = len(A_peaks)
-print('Nr. of peaks A: {}'.format(len(A_peaks)))
-
-B_nr_peaks = len(B_peaks)
-print('Nr. of peaks B: {}'.format(len(B_peaks)))
-
-B_bounces = np.empty((3, B_nr_peaks * 2))
-if B_nr_peaks > 0:
-    B_peak_widths = peak_widths(B_clipped, B_peaks, rel_height=0.01)
-    print('Widths of B [ms]: \n{}'.format(1000 * samples_to_seconds(B_peak_widths[0])))
-    B_pk_prominences = peak_prominences(B_clipped, B_peaks)[0]
-    B_valley_widths = peak_widths(B_flipped, B_valleys, rel_height=0.01)
-
-    B_bounces[1][0] = np.where(B_filtrd[:int(B_peak_widths[2][0])] > B_lower_threshold)[0][0]
-    B_bounces[2][0] = B_peak_widths[2][0]
-    for x in range(0, min(B_nr_peaks - 1, len(B_valley_widths))):
-        B_bounces[1][2 * x + 1] = B_peak_widths[3][x]
-        B_bounces[2][2 * x + 1] = B_valley_widths[2][x]
-    for x in range(1, min(B_nr_peaks, len(B_valley_widths) + 1)):
-        B_bounces[1][2 * x] = B_valley_widths[3][x - 1]
-        B_bounces[2][2 * x] = B_peak_widths[2][x]
-    B_bounces[1][B_nr_peaks * 2 - 1] = B_peak_widths[3][B_nr_peaks - 1]
-    B_bounces[2][B_nr_peaks * 2 - 1] = int(B_peak_widths[3][B_nr_peaks - 1]) + np.where(B_filtrd[int(B_peak_widths[3][B_nr_peaks - 1]):int(B_peak_widths[3][B_nr_peaks - 1] + B_peak_widths[0][-1]/2)] > B_lower_threshold)[0][-1]
-    for x in range(0, B_nr_peaks * 2):
-        B_bounces[0][x] = B_bounces[2][x] - B_bounces[1][x]
-
-print("A Bounces in samples:")
-print(A_bounces)
-print("A Bounces in milliseconds:")
-print(samples_to_seconds(A_bounces[0])*1000)
-
-print("B Bounces in samples:")
-print(B_bounces)
-print("B Bounces in milliseconds:")
-print(samples_to_seconds(B_bounces)*1000)
 
 
+fig, axs = plt.subplots(4) 
 
-fig, axs = plt.subplots(6) 
-
-x = a_wave.x
-y = a_wave.y
-
-_, units = 'ms'
-interval = interval.ms
 n = 0
 
+
+units = 'ms'
+
+chann = 'A'
+x = a_wave.x
+y = a_wave.y
+mid = A_mid
+upp = A_upper_threshold
+low = A_lower_threshold
+bnc = A_bounces
+dt = a_wave.dt.ms
+clipped = A_clipped
+peaks, _pk = A_pk
+valleys, _vl = A_vly
+
+print('Nr. of peaks {0}: {1}'.format(chann, len(peaks)))
+print(chann + "Bounces in samples:")
+print(bnc[0])
+print(chann +  "Bounces in milliseconds:")
+print(bnc[0]*dt)
+
+axs[n].set_title('Channel: ' + chann)
+axs[n].set_ylabel('signal/mV')
+axs[n].hlines(mid, 0, x[-1], linestyle='dotted')
+for i, (x1, x2, s) in enumerate(zip(bnc[1], bnc[2], bnc[0])):
+    s = s * dt
+    x1 = x1 *dt
+    x2 = x2 *dt
+    axs[n].text(x1, mid - 0.2 + 0.3 * (i % 2), '{0:.2f} ms'.format(s), size='small')
+    axs[n].hlines(mid, x1, x2, color = 'red')
+axs[n].hlines(upp, 0, x[-1], color = 'orange')
+axs[n].hlines(low, 0, x[-1], color = 'green')
 axs[n].plot(x, y)
 n += 1
+
+
+axs[n].set_ylabel('signal/mV')
+axs[n].plot(x, clipped)
+if len(peaks) > 0:
+    axs[n].plot(peaks * dt, clipped[peaks], 'x')
+    axs[n].plot(valleys * dt, clipped[valleys], 'x')
+    for i, (x1, x2, s) in enumerate(zip(bnc[1], bnc[2], bnc[0])):
+        s = s * dt
+        x1 = x1 *dt
+        x2 = x2 *dt
+        axs[n].text(x1, mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
+        axs[n].hlines(mid, x1, x2, color = 'red')
+    for x1, x2 in zip(_pk['left_ips'], _pk['right_ips']):
+        x1 = x1 * dt
+        x2 = x2 * dt
+        axs[n].hlines(mid + 0.1, x1, x2, color='orange')
+    for x1, x2 in zip(_vl['left_ips'], _vl['right_ips']):
+        x1 = x1 * dt
+        x2 = x2 * dt
+        axs[n].hlines(mid - 0.1, x1, x2, color='green') 
+n += 1
+
+chann = 'B'
+x = b_wave.x
 y = b_wave.y
+mid = B_mid
+upp = B_upper_threshold
+low = B_lower_threshold
+bnc = B_bounces
+dt = b_wave.dt.ms
+clipped = B_clipped
+peaks, _pk = B_pk
+valleys, _vl = B_vly
+
+print('Nr. of peaks {0}: {1}'.format(chann, len(peaks)))
+print(chann + "Bounces in samples:")
+print(bnc[0])
+print(chann +  "Bounces in milliseconds:")
+print(bnc[0]*dt)
+
+axs[n].set_title('Channel: ' + chann)
+axs[n].set_ylabel('signal/mV')
+axs[n].hlines(mid, 0, x[-1], linestyle='dotted')
+for i, (x1, x2, s) in enumerate(zip(bnc[1], bnc[2], bnc[0])):
+    s = s * dt
+    x1 = x1 *dt
+    x2 = x2 *dt
+    axs[n].text(x1, mid - 0.2 + 0.3 * (i % 2), '{0:.2f} ms'.format(s), size='small')
+    axs[n].hlines(mid, x1, x2, color = 'red')
+axs[n].hlines(upp, 0, x[-1], color = 'orange')
+axs[n].hlines(low, 0, x[-1], color = 'green')
 axs[n].plot(x, y)
 n += 1
 
-axs[n].set_xlabel('time/{}'.format(units))
-axs[n].hlines(A_mid, 0, interval, linestyle='dotted')
-for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
-    s = samples_to_seconds(s) * 10000
-    x1 = samples_to_seconds(x1) * 10000
-    x2 = samples_to_seconds(x2) * 10000
-    axs[n].text(x1, A_mid - 0.2 + 0.3 * (i % 2), '{0:.2f} ms'.format(s), size='small')
-    axs[n].hlines(A_mid, x1, x2, color = 'red')
-axs[n].hlines(A_upper_threshold, 0, interval, color = 'green')
-axs[n].hlines(A_lower_threshold, 0, interval, color = 'green')
-axs[n].plot(np.linspace(0, interval, nsamples), A_filtrd)
-n += 1
 
-
-axs[n].set_xlabel('time/{}'.format(units))
-axs[n].plot(A_clipped)
-if A_nr_peaks > 0:
-    axs[n].plot(A_peaks, A_clipped[A_peaks], 'x')
-    axs[n].plot(A_valleys, A_clipped[A_valleys], 'x')
-    for i, (x1, x2, s) in enumerate(zip(A_bounces[1], A_bounces[2], A_bounces[0])):
-        s = s
-        x1 = x1
-        x2 = x2
-        axs[n].text(x1, A_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
-        axs[n].hlines(A_mid, x1, x2, color = 'red')
-    for x1, x2 in zip(a_[1]['left_ips'], a_[1]['right_ips']):
-        x1 = x1
-        x2 = x2
-        axs[n].hlines(A_mid + 0.1, x1, x2, color='orange')
-    for x1, x2 in zip(a__[1]['left_ips'], a__[1]['right_ips']):
-        x1 = x1
-        x2 = x2
-        axs[n].hlines(A_mid - 0.1, x1, x2, color='green') 
-n += 1
-
+axs[n].set_ylabel('signal/mV')
+axs[n].plot(x, clipped)
+if len(peaks) > 0:
+    axs[n].plot(peaks * dt, clipped[peaks], 'x')
+    axs[n].plot(valleys * dt, clipped[valleys], 'x')
+    for i, (x1, x2, s) in enumerate(zip(bnc[1], bnc[2], bnc[0])):
+        s = s * dt
+        x1 = x1 *dt
+        x2 = x2 *dt
+        axs[n].text(x1, mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
+        axs[n].hlines(mid, x1, x2, color = 'red')
+    for x1, x2 in zip(_pk['left_ips'], _pk['right_ips']):
+        x1 = x1 * dt
+        x2 = x2 * dt
+        axs[n].hlines(mid + 0.1, x1, x2, color='orange')
+    for x1, x2 in zip(_vl['left_ips'], _vl['right_ips']):
+        x1 = x1 * dt
+        x2 = x2 * dt
+        axs[n].hlines(mid - 0.1, x1, x2, color='green') 
 
 axs[n].set_xlabel('time/{}'.format(units))
-axs[n].hlines(B_mid, 0, interval, linestyle='dotted')
-for i, (x1, x2, s) in enumerate(zip(B_bounces[1], B_bounces[2], B_bounces[0])):
-    s = samples_to_seconds(s) * 1000
-    x1 = samples_to_seconds(x1) * 1000
-    x2 = samples_to_seconds(x2) * 1000
-    axs[n].text(x1, B_mid - 0.2 + 0.3 * (i % 2), '{0:.2f} ms'.format(s), size='small')
-    axs[n].hlines(B_mid, x1, x2, color = 'red')
-axs[n].hlines(B_upper_threshold, 0, interval, color = 'green')
-axs[n].hlines(B_lower_threshold, 0, interval, color = 'green')
-axs[n].plot(b_wave.x, b_wave.y)
-n += 1
-
-
-axs[n].set_xlabel('time/{}'.format(units))
-axs[n].plot(np.linspace(0, interval, nsamples), B_clipped)
-if B_nr_peaks > 0:
-    axs[n].plot(samples_to_seconds(B_peaks)*1000, B_clipped[B_peaks], 'x')
-    axs[n].plot(samples_to_seconds(B_valleys)*1000, B_clipped[B_valleys], 'x')
-    for i, (x1, x2, s) in enumerate(zip(B_bounces[1], B_bounces[2], B_bounces[0])):
-        s = samples_to_seconds(s) * 1000
-        x1 = samples_to_seconds(x1) * 1000
-        x2 = samples_to_seconds(x2) * 1000
-        axs[n].text(x1, B_mid - 0.1 + 0.2 * (i % 2), '{0:.2f} ms'.format(s), size='small')
-        axs[n].hlines(B_mid, x1, x2, color = 'red')
-    for x1, x2 in zip(B_peak_widths[2], B_peak_widths[3]):
-        x1 = samples_to_seconds(x1) * 1000
-        x2 = samples_to_seconds(x2) * 1000
-        axs[n].hlines(B_mid + 0.1, x1, x2, color='orange')
-    for x1, x2 in zip(B_valley_widths[2], B_valley_widths[3]):
-        x1 = samples_to_seconds(x1) * 1000
-        x2 = samples_to_seconds(x2) * 1000
-        axs[n].hlines(B_mid - 0.1, x1, x2, color='green') 
 n += 1
 
 
