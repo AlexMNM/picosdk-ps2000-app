@@ -229,13 +229,13 @@ print('Nr. of peaks A: {}'.format( len(A_pk[0])))
 print("A Bounces in samples:")
 print(A_bounces[0])
 print("A Bounces in milliseconds:")
-print(A_bounces[0]*dt)
+print(A_bounces[0]*a_wave.dt.ms)
 
 print('Nr. of peaks B: {}'.format( len(B_pk[0])))
 print("B Bounces in samples:")
 print(B_bounces[0])
 print("B Bounces in milliseconds:")
-print(B_bounces[0]*dt)
+print(B_bounces[0]*b_wave.dt.ms)
 
 
 fig, axs = plt.subplots(4) 
