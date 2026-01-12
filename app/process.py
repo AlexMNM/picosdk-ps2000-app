@@ -53,7 +53,6 @@ def normalize(signal):
 def filter_signal(signal, time_increment):
     D_F = 10
     return decimate(resize_fast(signal)[0], D_F, zero_phase=True), time_increment * D_F
-
 class Duration:
     def __init__(self, t, unit_exp=-3): # default unit: milliseconds
         self.ns = int(t * 10**(9+unit_exp))
@@ -66,6 +65,7 @@ class Wave:
             self.y = np.array(y)
         elif isinstance(y, np.ndarray | np.generic):
             self.y = y
+
         self.n = self.y.size
  
         self._dt = dt
@@ -74,51 +74,24 @@ class Wave:
         self.x = np.linspace(0, (self.n-1) * self.dt.ms, self.n )
         self.interval = Duration(self.dt.ms * self.n)
 
-    
+def get_freq(sig, duration):
+    fft = np.fft.rfft(sig, norm="ortho")
+    freq = abs(fft).argmax() * duration
+    per = 1 / freq
+    return freq, per
 
-filename = input("Drag file here:")
-with open(filename, 'r') as f:
-    data = json.load(f)
+def phase_shift(wave_a, wave_b):
+    norm_a, _, _ = normalize(wave_a.y)
+    norm_b, _, _ = normalize(wave_b.y)
+    freq_a, per_a = get_freq(norm_a, wave_a.interval.s)
+    freq_b, per_b = get_freq(norm_b, wave_b.interval.s)
 
+    xcorr = correlate(norm_a, norm_b)
+    dt = np.arange(1-wave_a.n ,wave_a.n)
+    t_shift = (dt[xcorr.argmax()] * wave_a.dt.s) * (360 / per_a)
 
-dt = data["setup"]["sample_interval"]
-a_wave = Wave(*filter_signal(data["raw_data"]["signal_A"], dt))
-b_wave = Wave(*filter_signal(data["raw_data"]["signal_B"], dt))
+    return t_shift, freq_a, per_a, freq_b, per_b
 
-
-nsamples = a_wave.n
-interval = a_wave.interval
-
-# Normalize data
-A_norm, A_mean, A_std = normalize(a_wave.y)
-B_norm, B_mean, B_std = normalize(b_wave.y)
-
-# Frequency and period
-fft_A = np.fft.rfft(A_norm, norm="ortho")
-freq_A = abs(fft_A).argmax() * interval.s
-period_A = 1 / freq_A
-
-fft_B = np.fft.rfft(B_norm, norm="ortho")
-freq_B = abs(fft_A).argmax() * interval.s
-period_B = 1 / freq_B
-
-print(f'Recovered frequency: A {freq_A} Hz, B {freq_B} Hz')
-print(f'Recovered period: A {period_A * 1e3} ms, B {period_B * 1e3} ms')
-
-# Phase
-xcorr = correlate(A_norm, B_norm)
-dt = np.arange(1-nsamples ,nsamples)
-recovered_timeshift = (dt[xcorr.argmax()] * a_wave.dt.s) * (360 / period_A)
-print('Recovered offset: {} degrees'.format(recovered_timeshift))
-
-
-
-
-
-
-
-
-# Statistics
 def modes(data):
     freq = Counter(data)
     mostfreq = freq.most_common()
@@ -155,7 +128,6 @@ def peaks_valleys(sig, period):
     v_res = find_peaks(flipped, height=(mid, mid + span), prominence=0.2*span, plateau_size=period*0.25, width=period*0.25, rel_height=R_H)
     return p_res, v_res, clipped, flipped, mid, span
 
-
 def bounces(p, v, clipped):
     peaks, p_prop = p
     valleys, v_prop = v
@@ -184,138 +156,100 @@ def bounces(p, v, clipped):
         
     return bounces
 
+def channel_ax(axs, chann, wave, mid, bnc, clipped, pk, vly): 
+    n = 0
+    y = wave.y
+    x = wave.x
+    dt = wave.dt.ms
+    upp = clipped.max()
+    low = clipped.min()
+    peaks, _pk = pk
+    valleys, _vl = vly
+
+    axs[n].set_title('Channel: ' + chann)
+    axs[n].set_ylabel('signal/mV')
+    axs[n].hlines(mid, 0, x[-1], linestyle='dotted')
+    for i, (x1, x2, s) in enumerate(zip(bnc[1], bnc[2], bnc[0])):
+        s = s * dt
+        x1 = x1 *dt
+        x2 = x2 *dt
+        axs[n].text(x1, mid * ( 0.9 - 0.1 * ((-1) ** (i % 2))), '{0:.2f} ms'.format(s), size='small')
+        axs[n].hlines(mid, x1, x2, color = 'red')
+    axs[n].hlines(upp, 0, x[-1], color = 'orange')
+    axs[n].hlines(low, 0, x[-1], color = 'green')
+    axs[n].plot(x, y)
+    n += 1
+
+    axs[n].set_ylabel('signal/mV')
+    axs[n].plot(x, clipped)
+    if len(peaks) > 0:
+        axs[n].plot(peaks * dt, clipped[peaks], 'x')
+        axs[n].plot(valleys * dt, clipped[valleys], 'x')
+        for i, (x1, x2, s) in enumerate(zip(bnc[1], bnc[2], bnc[0])):
+            s = s * dt
+            x1 = x1 *dt
+            x2 = x2 *dt
+            axs[n].text(x1, mid * ( 0.9 - 0.1 * ((-1) ** (i % 2))), '{0:.2f} ms'.format(s), size='small')
+            axs[n].hlines(mid, x1, x2, color = 'red')
+        for x1, x2 in zip(_pk['left_ips'], _pk['right_ips']):
+            x1 = x1 * dt
+            x2 = x2 * dt
+            axs[n].hlines(mid + 0.1, x1, x2, color='orange')
+        for x1, x2 in zip(_vl['left_ips'], _vl['right_ips']):
+            x1 = x1 * dt
+            x2 = x2 * dt
+            axs[n].hlines(mid - 0.1, x1, x2, color='green') 
+
+
+
+
+filename = input("Drag file here:")
+with open(filename, 'r') as f:
+    data = json.load(f)
+
+
+dt = data["setup"]["sample_interval"]
+a_wave = Wave(*filter_signal(data["raw_data"]["signal_A"], dt))
+b_wave = Wave(*filter_signal(data["raw_data"]["signal_B"], dt))
+
+
+recovered_timeshift, freq_A, period_A, freq_B, period_B = phase_shift(a_wave, b_wave)
+print('Recovered offset: {} degrees'.format(recovered_timeshift))
+
 
 A_pk, A_vly, A_clipped, A_flipped, A_mid, _ = peaks_valleys(a_wave.y, period_A/a_wave.dt.s)
 A_bounces = bounces(A_pk, A_vly, A_clipped)
-A_lower_threshold = A_clipped.min()
-A_upper_threshold = A_clipped.max()
 
 
 B_pk, B_vly, B_clipped, B_flipped, B_mid, _ = peaks_valleys(b_wave.y, period_B/b_wave.dt.s)
 B_bounces = bounces(B_pk, B_vly, B_clipped)
-B_lower_threshold = B_clipped.min()
-B_upper_threshold = B_clipped.max()
 
+
+print('Nr. of peaks A: {}'.format( len(A_pk[0])))
+print("A Bounces in samples:")
+print(A_bounces[0])
+print("A Bounces in milliseconds:")
+print(A_bounces[0]*dt)
+
+print('Nr. of peaks B: {}'.format( len(B_pk[0])))
+print("B Bounces in samples:")
+print(B_bounces[0])
+print("B Bounces in milliseconds:")
+print(B_bounces[0]*dt)
 
 
 fig, axs = plt.subplots(4) 
-
 fig.set_size_inches(12, 8)
 
-n = 0
-
-
 units = 'ms'
+axs[-1].set_xlabel('time/{}'.format(units))
 
-chann = 'A'
-x = a_wave.x
-y = a_wave.y
-mid = A_mid
-upp = A_upper_threshold
-low = A_lower_threshold
-bnc = A_bounces
-dt = a_wave.dt.ms
-clipped = A_clipped
-peaks, _pk = A_pk
-valleys, _vl = A_vly
-
-print('Nr. of peaks {0}: {1}'.format(chann, len(peaks)))
-print(chann + " Bounces in samples:")
-print(bnc[0])
-print(chann +  " Bounces in milliseconds:")
-print(bnc[0]*dt)
-
-axs[n].set_title('Channel: ' + chann)
-axs[n].set_ylabel('signal/mV')
-axs[n].hlines(mid, 0, x[-1], linestyle='dotted')
-for i, (x1, x2, s) in enumerate(zip(bnc[1], bnc[2], bnc[0])):
-    s = s * dt
-    x1 = x1 *dt
-    x2 = x2 *dt
-    axs[n].text(x1, mid * ( 0.9 - 0.1 * ((-1) ** (i % 2))), '{0:.2f} ms'.format(s), size='small')
-    axs[n].hlines(mid, x1, x2, color = 'red')
-axs[n].hlines(upp, 0, x[-1], color = 'orange')
-axs[n].hlines(low, 0, x[-1], color = 'green')
-axs[n].plot(x, y)
-n += 1
+channel_ax(axs, 'A', a_wave, A_mid, B_bounces, A_clipped, A_pk, A_vly)
+channel_ax(axs[2:], 'B', b_wave, B_mid, B_bounces, B_clipped, B_pk, B_vly)
 
 
-axs[n].set_ylabel('signal/mV')
-axs[n].plot(x, clipped)
-if len(peaks) > 0:
-    axs[n].plot(peaks * dt, clipped[peaks], 'x')
-    axs[n].plot(valleys * dt, clipped[valleys], 'x')
-    for i, (x1, x2, s) in enumerate(zip(bnc[1], bnc[2], bnc[0])):
-        s = s * dt
-        x1 = x1 *dt
-        x2 = x2 *dt
-        axs[n].text(x1, mid * ( 0.9 - 0.1 * ((-1) ** (i % 2))), '{0:.2f} ms'.format(s), size='small')
-        axs[n].hlines(mid, x1, x2, color = 'red')
-    for x1, x2 in zip(_pk['left_ips'], _pk['right_ips']):
-        x1 = x1 * dt
-        x2 = x2 * dt
-        axs[n].hlines(mid + 0.1, x1, x2, color='orange')
-    for x1, x2 in zip(_vl['left_ips'], _vl['right_ips']):
-        x1 = x1 * dt
-        x2 = x2 * dt
-        axs[n].hlines(mid - 0.1, x1, x2, color='green') 
-n += 1
-
-chann = 'B'
-x = b_wave.x
-y = b_wave.y
-mid = B_mid
-upp = B_upper_threshold
-low = B_lower_threshold
-bnc = B_bounces
-dt = b_wave.dt.ms
-clipped = B_clipped
-peaks, _pk = B_pk
-valleys, _vl = B_vly
-
-print('Nr. of peaks {0}: {1}'.format(chann, len(peaks)))
-print(chann + " Bounces in samples:")
-print(bnc[0])
-print(chann +  " Bounces in milliseconds:")
-print(bnc[0]*dt)
-
-axs[n].set_title('Channel: ' + chann)
-axs[n].set_ylabel('signal/mV')
-axs[n].hlines(mid, 0, x[-1], linestyle='dotted')
-for i, (x1, x2, s) in enumerate(zip(bnc[1], bnc[2], bnc[0])):
-    s = s * dt
-    x1 = x1 *dt
-    x2 = x2 *dt
-    axs[n].text(x1, mid * ( 0.9 - 0.1 * ((-1) ** (i % 2))), '{0:.2f} ms'.format(s), size='small')
-    axs[n].hlines(mid, x1, x2, color = 'red')
-axs[n].hlines(upp, 0, x[-1], color = 'orange')
-axs[n].hlines(low, 0, x[-1], color = 'green')
-axs[n].plot(x, y)
-n += 1
 
 
-axs[n].set_ylabel('signal/mV')
-axs[n].plot(x, clipped)
-if len(peaks) > 0:
-    axs[n].plot(peaks * dt, clipped[peaks], 'x')
-    axs[n].plot(valleys * dt, clipped[valleys], 'x')
-    for i, (x1, x2, s) in enumerate(zip(bnc[1], bnc[2], bnc[0])):
-        s = s * dt
-        x1 = x1 *dt
-        x2 = x2 *dt
-        axs[n].text(x1, mid * ( 0.9 - 0.1 * ((-1) ** (i % 2))), '{0:.2f} ms'.format(s), size='small')
-        axs[n].hlines(mid, x1, x2, color = 'red')
-    for x1, x2 in zip(_pk['left_ips'], _pk['right_ips']):
-        x1 = x1 * dt
-        x2 = x2 * dt
-        axs[n].hlines(mid + 0.1, x1, x2, color='orange')
-    for x1, x2 in zip(_vl['left_ips'], _vl['right_ips']):
-        x1 = x1 * dt
-        x2 = x2 * dt
-        axs[n].hlines(mid - 0.1, x1, x2, color='green') 
-
-axs[n].set_xlabel('time/{}'.format(units))
-n += 1
 
 
 """ axs[n].set_xlabel('time/{}'.format(units))
