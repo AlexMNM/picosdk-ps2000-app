@@ -161,17 +161,17 @@ def handle_request(c, req, b_sock, b_addr):
             c.send(json.dumps(msg).encode())
 
             
-            global fig, axs
-            for ax in axs:
-                ax.clear()
+            #global fig, axs
+            #for ax in axs:
+            #    ax.clear()
 
             #fig, axs = plt.subplots(4) 
-            units = 'ms'
-            axs[-1].set_xlabel('time/{}'.format(units))
-            channel_ax(axs, 'A', a_wave, A_mid, A_bounces, A_clipped, A_pk, A_vly)
-            channel_ax(axs[2:], 'B', b_wave, B_mid, B_bounces, B_clipped, B_pk, B_vly)
+            #units = 'ms'
+            #axs[-1].set_xlabel('time/{}'.format(units))
+            #channel_ax([axs[0], axs[1]], 'A', a_wave, A_mid, A_bounces, A_clipped, A_pk, A_vly)
+            #channel_ax([axs[2], axs[3]], 'B', b_wave, B_mid, B_bounces, B_clipped, B_pk, B_vly)
 
-            plt.pause(0.01)           
+            #plt.pause(0.01)           
             
             
     
@@ -317,9 +317,9 @@ l_server.listen(5)
 print(f"[+] Listening on port {bind_ip} : {bind_port}")  
 
 
-plt.show()
-plt.ion()
-fig, axs = plt.subplots(4) 
+#plt.show()
+#plt.ion()
+#fig, axs = plt.subplots(4) 
 
 # main loop
 while True:
