@@ -203,115 +203,115 @@ def channel_ax(axs, chann, wave, mid, bnc, clipped, pk, vly):
 
 
 
-filename = input("Drag file here:")
-with open(filename, 'r') as f:
-    data = json.load(f)
+# filename = input("Drag file here:")
+# with open(filename, 'r') as f:
+#     data = json.load(f)
 
 
-dt = data["setup"]["sample_interval"]
-a_wave = Wave(*filter_signal(data["raw_data"]["signal_A"], dt))
-b_wave = Wave(*filter_signal(data["raw_data"]["signal_B"], dt))
+# dt = data["setup"]["sample_interval"]
+# a_wave = Wave(*filter_signal(data["raw_data"]["signal_A"], dt))
+# b_wave = Wave(*filter_signal(data["raw_data"]["signal_B"], dt))
 
 
-recovered_timeshift, freq_A, period_A, freq_B, period_B = phase_shift(a_wave, b_wave)
-print('Recovered offset: {} degrees'.format(recovered_timeshift))
+# recovered_timeshift, freq_A, period_A, freq_B, period_B = phase_shift(a_wave, b_wave)
+# print('Recovered offset: {} degrees'.format(recovered_timeshift))
 
 
-A_pk, A_vly, A_clipped, A_flipped, A_mid, _ = peaks_valleys(a_wave.y, period_A/a_wave.dt.s)
-A_bounces = bounces(A_pk, A_vly, A_clipped)
+# A_pk, A_vly, A_clipped, A_flipped, A_mid, _ = peaks_valleys(a_wave.y, period_A/a_wave.dt.s)
+# A_bounces = bounces(A_pk, A_vly, A_clipped)
 
 
-B_pk, B_vly, B_clipped, B_flipped, B_mid, _ = peaks_valleys(b_wave.y, period_B/b_wave.dt.s)
-B_bounces = bounces(B_pk, B_vly, B_clipped)
+# B_pk, B_vly, B_clipped, B_flipped, B_mid, _ = peaks_valleys(b_wave.y, period_B/b_wave.dt.s)
+# B_bounces = bounces(B_pk, B_vly, B_clipped)
 
 
-print('Nr. of peaks A: {}'.format( len(A_pk[0])))
-print("A Bounces in samples:")
-print(A_bounces[0])
-print("A Bounces in milliseconds:")
-print(A_bounces[0]*a_wave.dt.ms)
+# print('Nr. of peaks A: {}'.format( len(A_pk[0])))
+# print("A Bounces in samples:")
+# print(A_bounces[0])
+# print("A Bounces in milliseconds:")
+# print(A_bounces[0]*a_wave.dt.ms)
 
-print('Nr. of peaks B: {}'.format( len(B_pk[0])))
-print("B Bounces in samples:")
-print(B_bounces[0])
-print("B Bounces in milliseconds:")
-print(B_bounces[0]*b_wave.dt.ms)
-
-
-fig, axs = plt.subplots(4) 
-fig.set_size_inches(12, 8)
-
-units = 'ms'
-axs[-1].set_xlabel('time/{}'.format(units))
-
-channel_ax(axs, 'A', a_wave, A_mid, B_bounces, A_clipped, A_pk, A_vly)
-channel_ax(axs[2:], 'B', b_wave, B_mid, B_bounces, B_clipped, B_pk, B_vly)
+# print('Nr. of peaks B: {}'.format( len(B_pk[0])))
+# print("B Bounces in samples:")
+# print(B_bounces[0])
+# print("B Bounces in milliseconds:")
+# print(B_bounces[0]*b_wave.dt.ms)
 
 
+# fig, axs = plt.subplots(4) 
+# fig.set_size_inches(12, 8)
 
+# units = 'ms'
+# axs[-1].set_xlabel('time/{}'.format(units))
+
+# channel_ax(axs, 'A', a_wave, A_mid, B_bounces, A_clipped, A_pk, A_vly)
+# channel_ax(axs[2:], 'B', b_wave, B_mid, B_bounces, B_clipped, B_pk, B_vly)
 
 
 
-""" axs[n].set_xlabel('time/{}'.format(units))
-axs[n].hlines(B_mid, 0, interval, color = 'red')
-axs[n].hlines(B_upper_threshold, 0, interval, color = 'green')
-axs[n].hlines(B_lower_threshold, 0, interval, color = 'green')
-axs[n].plot(np.linspace(0, interval, nsamples), B_filtrd)
-n += 1
 
 
-contour_heights = B_clipped[B_peaks] - B_pk_prominences
-B_flip_valley_widths = []
-B_flip_valley_widths[0:0] = B_valley_widths
-B_flip_valley_widths[1] = 2 * B_mid - B_valley_widths[1]
-axs[n].set_xlabel('time/{}'.format(units))
-axs[n].plot(B_clipped)
-axs[n].plot(B_peaks, B_clipped[B_peaks], 'x')
-axs[n].plot(B_valleys, B_clipped[B_valleys], 'x')
-axs[n].hlines([B_mid + 0.1 for x in B_peak_widths[1]], *B_peak_widths[2:], color='orange')
-axs[n].hlines([B_mid - 0.1 for x in B_valley_widths[1]],*B_valley_widths[2:], color='magenta')  # 2 * B_mid - B_clipped
-# axs[n].vlines(x=B_peaks, ymin=contour_heights, ymax=B_clipped[B_peaks])
-n += 1
-"""
-""" axs[n].set_xlabel('time/{}'.format(units))
-axs[n].plot(A_flipped)
-axs[n].plot(A_valleys, A_flipped[A_valleys], 'x')
-axs[n].hlines(*A_valley_widths[1:])
-n += 1 """
 
-""" axs[n].set_xlabel('time/{}'.format(units))
-axs[n].hlines(B_mid, 0, 1000, color = 'red')
-axs[n].plot(np.linspace(0, interval, nsamples), B)
-n += 1 """
+# """ axs[n].set_xlabel('time/{}'.format(units))
+# axs[n].hlines(B_mid, 0, interval, color = 'red')
+# axs[n].hlines(B_upper_threshold, 0, interval, color = 'green')
+# axs[n].hlines(B_lower_threshold, 0, interval, color = 'green')
+# axs[n].plot(np.linspace(0, interval, nsamples), B_filtrd)
+# n += 1
 
-""" axs[n].set_xlabel('time/{}'.format(units))
-axs[n].hlines(B_mid, 0, 1000, color = 'red')
-axs[n].hlines(B_upper_threshold, 0, 1000, color = 'green')
-axs[n].hlines(B_lower_threshold, 0, 1000, color = 'green')
-axs[n].plot(np.linspace(0, interval, nsamples), B_filtrd)
-n += 1
 
-axs[n].hlines(B_upper_threshold, 0, 2e6, color = 'green')
-axs[n].hlines(B_lower_threshold, 0, 2e6, color = 'green')
-axs[n].plot(ndimage.uniform_filter1d(sorted(B_filtrd), 50), color='blue')
-n += 1
+# contour_heights = B_clipped[B_peaks] - B_pk_prominences
+# B_flip_valley_widths = []
+# B_flip_valley_widths[0:0] = B_valley_widths
+# B_flip_valley_widths[1] = 2 * B_mid - B_valley_widths[1]
+# axs[n].set_xlabel('time/{}'.format(units))
+# axs[n].plot(B_clipped)
+# axs[n].plot(B_peaks, B_clipped[B_peaks], 'x')
+# axs[n].plot(B_valleys, B_clipped[B_valleys], 'x')
+# axs[n].hlines([B_mid + 0.1 for x in B_peak_widths[1]], *B_peak_widths[2:], color='orange')
+# axs[n].hlines([B_mid - 0.1 for x in B_valley_widths[1]],*B_valley_widths[2:], color='magenta')  # 2 * B_mid - B_clipped
+# # axs[n].vlines(x=B_peaks, ymin=contour_heights, ymax=B_clipped[B_peaks])
+# n += 1
+# """
+# """ axs[n].set_xlabel('time/{}'.format(units))
+# axs[n].plot(A_flipped)
+# axs[n].plot(A_valleys, A_flipped[A_valleys], 'x')
+# axs[n].hlines(*A_valley_widths[1:])
+# n += 1 """
 
-#axs[n].hist(A_filtrd, density=True, bins=1000)
-axs[n].plot(B_grd, color='green')
-n += 1 """
+# """ axs[n].set_xlabel('time/{}'.format(units))
+# axs[n].hlines(B_mid, 0, 1000, color = 'red')
+# axs[n].plot(np.linspace(0, interval, nsamples), B)
+# n += 1 """
 
-""" 
-axs[n].hlines(A_upper_threshold, 0, 2e6, color = 'green')
-axs[n].hlines(A_lower_threshold, 0, 2e6, color = 'green')
-axs[n].plot(ndimage.uniform_filter1d(sorted(A_filtrd), 50), color='blue')
-n += 1
-"""
-""" #axs[n].hist(A_filtrd, density=True, bins=1000)
-axs[n].plot(A_grd, color='green')
-n += 1 """
+# """ axs[n].set_xlabel('time/{}'.format(units))
+# axs[n].hlines(B_mid, 0, 1000, color = 'red')
+# axs[n].hlines(B_upper_threshold, 0, 1000, color = 'green')
+# axs[n].hlines(B_lower_threshold, 0, 1000, color = 'green')
+# axs[n].plot(np.linspace(0, interval, nsamples), B_filtrd)
+# n += 1
+
+# axs[n].hlines(B_upper_threshold, 0, 2e6, color = 'green')
+# axs[n].hlines(B_lower_threshold, 0, 2e6, color = 'green')
+# axs[n].plot(ndimage.uniform_filter1d(sorted(B_filtrd), 50), color='blue')
+# n += 1
+
+# #axs[n].hist(A_filtrd, density=True, bins=1000)
+# axs[n].plot(B_grd, color='green')
+# n += 1 """
+
+# """ 
+# axs[n].hlines(A_upper_threshold, 0, 2e6, color = 'green')
+# axs[n].hlines(A_lower_threshold, 0, 2e6, color = 'green')
+# axs[n].plot(ndimage.uniform_filter1d(sorted(A_filtrd), 50), color='blue')
+# n += 1
+# """
+# """ #axs[n].hist(A_filtrd, density=True, bins=1000)
+# axs[n].plot(A_grd, color='green')
+# n += 1 """
           
 
-plt.show()
+# plt.show()
 
 
 
