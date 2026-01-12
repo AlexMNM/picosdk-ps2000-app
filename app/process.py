@@ -147,7 +147,7 @@ def bounces(p, v, clipped):
             right = 2 * i + 1
             vir = i - v_offs
             vil = vir - 1
-            bounces[ST][left] = v_prop['right_ips'][vil] if v_cnt > 0 and vil > -1 else over_min[0]
+            bounces[ST][left] = v_prop['right_ips'][vil] if v_cnt > 0 and vil > -1 else over_min[over_min > p_prop['left_ips'][0] / 2 ][0]
             bounces[ND][left] = p_prop['left_ips'][i]
             bounces[V][left] = bounces[ND][left] - bounces[ST][left]
             bounces[ST][right] = p_prop['right_ips'][i]
@@ -203,49 +203,49 @@ def channel_ax(axs, chann, wave, mid, bnc, clipped, pk, vly):
 
 
 
-# filename = input("Drag file here:")
-# with open(filename, 'r') as f:
-#     data = json.load(f)
+filename = input("Drag file here:")
+with open(filename, 'r') as f:
+    data = json.load(f)
 
 
-# dt = data["setup"]["sample_interval"]
-# a_wave = Wave(*filter_signal(data["raw_data"]["signal_A"], dt))
-# b_wave = Wave(*filter_signal(data["raw_data"]["signal_B"], dt))
+dt = data["setup"]["sample_interval"]
+a_wave = Wave(*filter_signal(data["raw_data"]["signal_A"], dt))
+b_wave = Wave(*filter_signal(data["raw_data"]["signal_B"], dt))
 
 
-# recovered_timeshift, freq_A, period_A, freq_B, period_B = phase_shift(a_wave, b_wave)
-# print('Recovered offset: {} degrees'.format(recovered_timeshift))
+recovered_timeshift, freq_A, period_A, freq_B, period_B = phase_shift(a_wave, b_wave)
+print('Recovered offset: {} degrees'.format(recovered_timeshift))
 
 
-# A_pk, A_vly, A_clipped, A_flipped, A_mid, _ = peaks_valleys(a_wave.y, period_A/a_wave.dt.s)
-# A_bounces = bounces(A_pk, A_vly, A_clipped)
+A_pk, A_vly, A_clipped, A_flipped, A_mid, _ = peaks_valleys(a_wave.y, period_A/a_wave.dt.s)
+A_bounces = bounces(A_pk, A_vly, A_clipped)
 
 
-# B_pk, B_vly, B_clipped, B_flipped, B_mid, _ = peaks_valleys(b_wave.y, period_B/b_wave.dt.s)
-# B_bounces = bounces(B_pk, B_vly, B_clipped)
+B_pk, B_vly, B_clipped, B_flipped, B_mid, _ = peaks_valleys(b_wave.y, period_B/b_wave.dt.s)
+B_bounces = bounces(B_pk, B_vly, B_clipped)
 
 
-# print('Nr. of peaks A: {}'.format( len(A_pk[0])))
-# print("A Bounces in samples:")
-# print(A_bounces[0])
-# print("A Bounces in milliseconds:")
-# print(A_bounces[0]*a_wave.dt.ms)
+print('Nr. of peaks A: {}'.format( len(A_pk[0])))
+print("A Bounces in samples:")
+print(A_bounces[0])
+print("A Bounces in milliseconds:")
+print(A_bounces[0]*a_wave.dt.ms)
 
-# print('Nr. of peaks B: {}'.format( len(B_pk[0])))
-# print("B Bounces in samples:")
-# print(B_bounces[0])
-# print("B Bounces in milliseconds:")
-# print(B_bounces[0]*b_wave.dt.ms)
+print('Nr. of peaks B: {}'.format( len(B_pk[0])))
+print("B Bounces in samples:")
+print(B_bounces[0])
+print("B Bounces in milliseconds:")
+print(B_bounces[0]*b_wave.dt.ms)
 
 
-# fig, axs = plt.subplots(4) 
-# fig.set_size_inches(12, 8)
+fig, axs = plt.subplots(4) 
+fig.set_size_inches(12, 8)
 
-# units = 'ms'
-# axs[-1].set_xlabel('time/{}'.format(units))
+units = 'ms'
+axs[-1].set_xlabel('time/{}'.format(units))
 
-# channel_ax(axs, 'A', a_wave, A_mid, B_bounces, A_clipped, A_pk, A_vly)
-# channel_ax(axs[2:], 'B', b_wave, B_mid, B_bounces, B_clipped, B_pk, B_vly)
+channel_ax([axs[0], axs[1]], 'A', a_wave, A_mid, A_bounces, A_clipped, A_pk, A_vly)
+channel_ax([axs[2], axs[3]], 'B', b_wave, B_mid, B_bounces, B_clipped, B_pk, B_vly)
 
 
 
@@ -311,7 +311,7 @@ def channel_ax(axs, chann, wave, mid, bnc, clipped, pk, vly):
 # n += 1 """
           
 
-# plt.show()
+plt.show()
 
 
 
