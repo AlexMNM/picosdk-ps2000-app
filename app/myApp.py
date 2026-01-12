@@ -13,7 +13,7 @@ import logging
 # Import packages
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import correlate, find_peaks, peak_widths, peak_prominences, peaks_valleys
+from scipy.signal import correlate, find_peaks, peak_widths, peak_prominences
 from scipy import ndimage
 
 # Import picosdk
@@ -22,7 +22,7 @@ from picosdk.functions import assert_pico2000_ok
 from picosdk.ctypes_wrapper import C_CALLBACK_FUNCTION_FACTORY
 
 # Import process
-from process import Wave, filter_signal, phase_shift, bounces, channel_ax
+from process import Wave, filter_signal, phase_shift, bounces, channel_ax, peaks_valleys
 
 
 logger = logging.getLogger(__name__)
