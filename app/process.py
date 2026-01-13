@@ -156,6 +156,13 @@ def bounces(p, v, clipped):
         
     return bounces
 
+def duty_cycle(period, peak_widths, dt):
+    if len(peak_widths) < 2:
+        return 0
+    avg_width = np.mean(peak_widths) * dt
+    duty = (avg_width / period) * 100
+    return duty
+
 def channel_ax(axs, chann, wave, mid, bnc, clipped, pk, vly): 
     n = 0
     y = wave.y

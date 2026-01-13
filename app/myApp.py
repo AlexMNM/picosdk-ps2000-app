@@ -22,7 +22,7 @@ from picosdk.functions import assert_pico2000_ok
 from picosdk.ctypes_wrapper import C_CALLBACK_FUNCTION_FACTORY
 
 # Import process
-from process import Wave, filter_signal, phase_shift, bounces, channel_ax, peaks_valleys
+from process import Wave, filter_signal, phase_shift, bounces, channel_ax, peaks_valleys, duty_cycle
 
 
 logger = logging.getLogger(__name__)
@@ -89,18 +89,21 @@ def handle_request(c, req, b_sock, b_addr):
 
             A_pk, A_vly, A_clipped, A_flipped, A_mid, _ = peaks_valleys(a_wave.y, period_A/a_wave.dt.s)
             A_bounces = bounces(A_pk, A_vly, A_clipped)
+            A_duty = duty_cycle(period_A, A_pk[1]['widths'], a_wave.dt.s)
 
 
             B_pk, B_vly, B_clipped, B_flipped, B_mid, _ = peaks_valleys(b_wave.y, period_B/b_wave.dt.s)
             B_bounces = bounces(B_pk, B_vly, B_clipped)
+            B_duty = duty_cycle(period_B, B_pk[1]['widths'], b_wave.dt.s)
 
-
+            print('A Duty Cycle: {:.2f} %'.format(A_duty))
             print('Nr. of peaks A: {}'.format( len(A_pk[0])))
             print("A Bounces in samples:")
             print(A_bounces[0])
             print("A Bounces in milliseconds:")
             print(A_bounces[0]*a_wave.dt.ms)
 
+            print('B Duty Cycle: {:.2f} %'.format(B_duty))
             print('Nr. of peaks B: {}'.format( len(B_pk[0])))
             print("B Bounces in samples:")
             print(B_bounces[0])
