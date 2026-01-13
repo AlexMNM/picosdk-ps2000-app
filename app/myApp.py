@@ -136,7 +136,9 @@ def handle_request(c, req, b_sock, b_addr):
                     "B_period": period_B,
                     "phase_delta":  recovered_timeshift,
                     "A_peak_cnt": len(A_pk[0]),
-                    "B_peak_cnt": len(B_pk[0])
+                    "B_peak_cnt": len(B_pk[0]),
+                    "A_duty_cycle": A_duty,
+                    "B_duty_cycle": B_duty
                 }
             }
             timestamp = strftime("%Y%m%d-%H%M%S")
