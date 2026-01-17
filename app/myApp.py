@@ -146,6 +146,7 @@ def handle_request(c, req, b_sock, b_addr):
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             with open(filename, 'w') as f:
                 json.dump(data, f)
+            print(f"Signals saved to {filename}")
 
 
             del data["raw_data"]
