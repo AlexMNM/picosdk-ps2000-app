@@ -108,8 +108,8 @@ def get_thresholds(data):
     _gradient[:int(_gradient.size/5)] = _gradient[-int(_gradient.size/5):] = _gradient.min()
     _lower = _sorted[np.where(_gradient >= np.percentile(_gradient, 98.8))[0][0]]   # 6*_gradient.std()
     _upper = _sorted[np.where(_gradient >= np.percentile(_gradient, 99.8))[0][-1]]  # 6*_gradient.std()
-    _lower = max(900, _lower)
-    _upper = min(9100, _upper)
+    _lower = 1000 #max(900, _lower)
+    _upper = 9000 #min(9100, _upper)
     return _lower, _upper, _gradient
 
 def clip(sig):
