@@ -155,42 +155,22 @@ def handle_request(c, req, b_sock, b_addr):
             print(B_bounces[0]*b_wave.dt.ms)
 
             # Save values
-            data = {
-                "setup": { 
-                    #"first_edge": settings.leading_wave,
-                    #"expected_pulses": settings.pulses,
-                    #"expected_period": 1 / settings.expected_pulses,
-                    #"expected_pulse_width": 1 / settings.expected_pulses * 0.4,
-                    "sample_interval": dt,
-                    #"time_interval": 1 + 0.2 * 1 / settings.expected_pulses,
-                    "samples": len(valuesA)
-                },
-
-                "raw_data": {
+            del data["signals"]
+            data["raw_data"] = {
                     "signal_A": valuesA,
-                    "signal_B": valuesB
-                },
+                    "signal_B": valuesB 
+                    }
+            
+            
+            def save_data():
+                timestamp = strftime("%Y%m%d-%H%M%S")
+                filename = "./app/__pycache__/signals/signal_data_" + timestamp + ".json"
+                os.makedirs(os.path.dirname(filename), exist_ok=True)
+                with open(filename, 'w') as f:
+                    json.dump(data, f)
+                print(f"Signals saved to {filename}")
 
-                "results": {
-                    "A_bounces": (A_bounces[0]*a_wave.dt.ms).tolist(),
-                    "B_bounces": (B_bounces[0]*b_wave.dt.ms).tolist(),
-                    "A_frequency": freq_A,
-                    "B_frequency": freq_B,
-                    "A_period": period_A, 
-                    "B_period": period_B,
-                    "phase_delta":  recovered_timeshift,
-                    "A_peak_cnt": len(A_pk[0]),
-                    "B_peak_cnt": len(B_pk[0]),
-                    "A_duty_cycle": A_duty,
-                    "B_duty_cycle": B_duty
-                }
-            }
-            timestamp = strftime("%Y%m%d-%H%M%S")
-            filename = "./app/__pycache__/signals/signal_data_" + timestamp + ".json"
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
-            with open(filename, 'w') as f:
-                json.dump(data, f)
-            print(f"Signals saved to {filename}")
+            threading.Thread(target=save_data).start()
 
 
                 
@@ -230,7 +210,7 @@ class StreamingDevice:
     def set_trigger(self, leading_wave):
         threshold = int(32_767 / 2) # about half the potential range in ADC values (-32_767 -> +32_767)
         direction = TriggerDirection.PS2000_RISING
-        delay = 0 # percent -100% -> +100%
+        delay = 0# percent -100% -> +100%
         auto_trigger = 2_000 # milliseconds
         res = ps2000.ps2000_set_trigger(
             self.device.handle, 
@@ -243,8 +223,8 @@ class StreamingDevice:
 
     def set_samples(self, expected_pulses):
         expected_period = 1 / expected_pulses
-        time_interval = 1 + 0.2 * expected_period
-        self.samples = seconds_to_samples(time_interval, self.sample_interval)
+        time_interval = 1 + 1.2 * expected_period
+        self.gather_values = seconds_to_samples(time_interval, self.sample_interval)
 
     def set_pretrigger(self, expected_pulses):
         expected_period = 1 / expected_pulses # seconds

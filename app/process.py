@@ -76,7 +76,7 @@ class Wave:
 
 def get_freq(sig, duration):
     fft = np.fft.rfft(sig, norm="ortho")
-    freq = abs(fft).argmax() * duration
+    freq = abs(fft).argmax() / duration
     per = 1 / freq
     return freq, per
 
