@@ -44,6 +44,7 @@ print(B_bounces[0]*b_wave.dt.ms)
 fig, axs = plt.subplots(4) 
 fig.set_size_inches(12, 8)
 units = 'ms'
+
 axs[-1].set_xlabel('time/{}'.format(units))
 
 channel_ax(axs, 'A', a_wave, A_mid, A_bounces, A_clipped, A_pk, A_vly)

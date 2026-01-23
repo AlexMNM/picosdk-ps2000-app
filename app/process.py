@@ -124,8 +124,8 @@ def peaks_valleys(sig, period):
     R_H = 0.01
     clipped, mid, span = clip(sig)
     flipped = 2 * mid - clipped
-    p_res = find_peaks(clipped, distance=period*0.4, height=mid, prominence=0.4*span, plateau_size=period*0.2, width=period*0.2, rel_height=R_H)
-    v_res = find_peaks(flipped, height=mid, prominence=0.2*span, plateau_size=period*0.2, width=period*0.2, rel_height=R_H)
+    p_res = find_peaks(clipped, distance=period*(1-0.2), height=mid, prominence=0.4*span, plateau_size=(period*(0.5-0.4), period*(0.5+0.4)), width=(period*(0.5-0.3), period*(0.5+0.3)), rel_height=R_H)
+    v_res = find_peaks(flipped, distance=period*(1-0.2), height=mid, prominence=0.2*span, plateau_size=(period*(0.5-0.4), period*(0.5+0.4)), width=(period*(0.5-0.3), period*(0.5+0.3)), rel_height=R_H)
     return p_res, v_res, clipped, flipped, mid, span
 
 def bounces(p, v, clipped):
