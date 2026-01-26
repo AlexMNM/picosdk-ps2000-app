@@ -88,9 +88,12 @@ def handle_request(c, req, b_sock, b_addr):
     c.send(json.dumps(response).encode())
     print("Gathering...")
 
-
-    picoDevice.set_pretrigger(req[3]) # set pretrigger interval in seconds
+    
+    
     picoDevice.set_samples(req[2])  # set total sample interval in seconds
+    picoDevice.set_pretrigger(req[3]) # set pretrigger interval in seconds
+    picoDevice.set_range(ps2000.PS2000_VOLTAGE_RANGE["PS2000_20V"])  # set range to 20V
+    picoDevice.set_trigger(5_000)  # set trigger at 5V    
     picoDevice.run_streaming()
     valuesA, valuesB, trigger_start = picoDevice.gather()
     picoDevice.stop()
@@ -171,11 +174,10 @@ def handle_request(c, req, b_sock, b_addr):
     print("B Bounces in milliseconds:")
     print(B_bounces[0] * b_wave.dt.ms)
 
-    # Save values
-    del data["signals"]
-    data["raw_data"] = {"signal_A": valuesA, "signal_B": valuesB}
-
-    def save_data():
+    # Save values in a separate thread
+    def save_data(data=data, valuesA=valuesA, valuesB=valuesB):
+        del data["signals"]
+        data["raw_data"] = {"signal_A": valuesA, "signal_B": valuesB}
         timestamp = strftime("%Y%m%d-%H%M%S")
         filename = "./app/__pycache__/signals/signal_data_" + timestamp + ".json"
         os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -195,11 +197,15 @@ class StreamingDevice:
         potential_range=ps2000.PS2000_VOLTAGE_RANGE["PS2000_1V"]
     ):
         self.device = ps2000.open_unit()
-        self.potential_range = potential_range
         self.gather_values = gather_values
         self.sample_interval = sample_interval
-        self.pretrigger = 0 
+        self.pretrigger = 0
+        
+        self.set_range(potential_range)
+        self.set_trigger(15_000) # set trigger at 5V
 
+
+    def set_range(self, potential_range):
         res = ps2000.ps2000_set_channel(
             self.device.handle, ps2000.PICO_CHANNEL["A"], True, True, potential_range
         )
@@ -208,17 +214,14 @@ class StreamingDevice:
             self.device.handle, ps2000.PICO_CHANNEL["B"], True, True, potential_range
         )
         assert_pico2000_ok(res)
-        
-        self.set_trigger(5_000) # set trigger at 5V
-
-
+        self.potential_range = potential_range
 
     def set_trigger(self, threshold, leading_wave="A"):
         threshold = mv_to_adc(threshold, self.potential_range) #int( 32_767 / 4 )  # about a quarter of the potential range in ADC values (-32_767 -> +32_767)
         print("Trigger threshold (ADC): ", threshold)
         direction = TriggerDirection.PS2000_RISING
         delay = 0  # percent -100% -> +100%
-        auto_trigger = 2_000  # milliseconds
+        auto_trigger = 5_000  # milliseconds
         res = ps2000.ps2000_set_trigger(
             self.device.handle,
             ps2000.PICO_CHANNEL[leading_wave],
@@ -231,7 +234,6 @@ class StreamingDevice:
 
     def set_pretrigger(self, interval):
         self.pretrigger = seconds_to_samples(interval, self.sample_interval)
-        print("Pretrigger samples: ", self.pretrigger)
 
     def set_samples(self, interval):
         self.gather_values = seconds_to_samples(interval, self.sample_interval)
@@ -257,8 +259,8 @@ class StreamingDevice:
         self.device.close()
 
     def gather(self):
-        adc_valuesA = deque(maxlen=self.gather_values)
-        adc_valuesB = deque(maxlen=self.gather_values)
+        adc_valuesA = deque()
+        adc_valuesB = deque()
         pretriggerA = deque(maxlen=self.pretrigger)
         pretriggerB = deque(maxlen=self.pretrigger)
         triggered = False
@@ -271,19 +273,22 @@ class StreamingDevice:
             nonlocal start_at
 
             if not triggered:
+                if  _triggered:
+                    print("Triggered at sample: ", start_at)
+                    print("Pretrigger samples: ", len(pretriggerA))
                 start_at = _triggered_at if _triggered else n_values
                 pretriggerA.extend(buffers[0][0:start_at])
                 pretriggerB.extend(buffers[2][0:start_at])
-
+                
             if _triggered:
                 triggered = True
-                print("Triggered at sample: ", start_at)
-                print("Pretrigger samples: ", len(pretriggerA))
 
             if triggered:
                 adc_valuesA.extend(buffers[0][start_at:n_values])
                 adc_valuesB.extend(buffers[2][start_at:n_values])
                 start_at = 0
+                
+            
 
         callback = CALLBACK(get_overview_buffers)
 
@@ -304,14 +309,14 @@ class StreamingDevice:
 
 # Setup
 # first_edge = 'A' # A or B, depending on the direction of rotation
-expected_pulses = 8  # how many pulses should the encoder have in one turn / second
-expected_period = 1 / expected_pulses  # seconds
-expected_pulse_width = expected_period * 0.4  # seconds
-sample_interval = 500  # sample interval in nanoseconds
-time_interval = 1 + 0.2 * expected_period  # time interval for testing, in seconds
-samples = seconds_to_samples(
-    time_interval, sample_interval
-)  # how many samples in the time interval
+#expected_pulses = 8  # how many pulses should the encoder have in one turn / second
+#expected_period = 1 / expected_pulses  # seconds
+#expected_pulse_width = expected_period * 0.4  # seconds
+#sample_interval = 500  # sample interval in nanoseconds
+#time_interval = 1 + 0.2 * expected_period  # time interval for testing, in seconds
+#samples = seconds_to_samples(
+#    time_interval, sample_interval
+#)  # how many samples in the time interval
 
 
 # Start device
