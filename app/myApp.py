@@ -271,9 +271,9 @@ class StreamingDevice:
             nonlocal start_at
 
             if not triggered:
-                start_at = _triggered_at
-                pretriggerA.extend(buffers[0][0:(0**start_at * n_values + start_at)])
-                pretriggerB.extend(buffers[2][0:(0**start_at * n_values + start_at)])
+                start_at = _triggered_at if _triggered else n_values
+                pretriggerA.extend(buffers[0][0:start_at])
+                pretriggerB.extend(buffers[2][0:start_at])
 
             if _triggered:
                 triggered = True
@@ -287,7 +287,7 @@ class StreamingDevice:
 
         callback = CALLBACK(get_overview_buffers)
 
-        while (len(adc_valuesA) < self.gather_values) or not triggered:
+        while (len(adc_valuesA) < self.gather_values):
             ps2000.ps2000_get_streaming_last_values(self.device.handle, callback)
 
         self.end_time = time_ns()
