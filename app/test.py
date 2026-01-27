@@ -41,14 +41,16 @@ print("B Bounces in milliseconds:")
 print(B_bounces[0]*b_wave.dt.ms)
 
 
-fig, axs = plt.subplots(4) 
+fig, axs = plt.subplots(6) 
 fig.set_size_inches(12, 8)
 units = 'ms'
 
 axs[-1].set_xlabel('time/{}'.format(units))
 
-channel_ax(axs, 'A', a_wave, A_mid, A_bounces, A_clipped, A_pk, A_vly)
-channel_ax(axs[2:], 'B', b_wave, B_mid, B_bounces, B_clipped, B_pk, B_vly)
+axs[0].plot(data["raw_data"]["signal_A"])
+channel_ax(axs[1:], 'A', a_wave, A_mid, A_bounces, A_clipped, A_pk, A_vly)
+axs[3].plot(data["raw_data"]["signal_B"])
+channel_ax(axs[4:], 'B', b_wave, B_mid, B_bounces, B_clipped, B_pk, B_vly)
 
 
 plt.show()

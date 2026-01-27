@@ -244,8 +244,8 @@ class StreamingDevice:
             self.device.handle,
             self.sample_interval,
             ps2000.PS2000_TIME_UNITS["PS2000_NS"],  # Units: Nanoseconds
-            22_000_000,  # 100_000, # max_samples
-            False,  # auto_stop
+            3_000_000,  # 100_000, # max_samples
+            True,  # auto_stop
             1,  # noOfSamplesPerAggregate
             50_000,  # overview_buffer_size
         )
@@ -305,6 +305,7 @@ class StreamingDevice:
 
     def stop(self):
         ps2000.ps2000_stop(self.device.handle)
+        print("Aquisition stopped.")
 
 
 # Setup
