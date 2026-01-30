@@ -147,6 +147,7 @@ def bounces(p, v, clipped):
             right = 2 * i + 1
             vir = i - v_offs
             vil = vir - 1
+            vil = min(vil, v_cnt -1)
             bounces[ST][left] = v_prop['right_ips'][vil] if v_cnt > 0 and vil > -1 else over_min[over_min > p_prop['left_ips'][0] / 2 ][0]
             bounces[ND][left] = p_prop['left_ips'][i]
             bounces[V][left] = bounces[ND][left] - bounces[ST][left]
