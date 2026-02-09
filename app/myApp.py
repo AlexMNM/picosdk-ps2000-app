@@ -175,11 +175,19 @@ def handle_request(c, req, b_sock, b_addr):
     print(B_bounces[0] * b_wave.dt.ms)
 
     # Save values in a separate thread
-    def save_data(data=data, valuesA=valuesA, valuesB=valuesB):
+    def save_data(data=data, valuesA=valuesA, valuesB=valuesB, max_files=2000):
+        # Remove the reduced signals to save space, as they can be easily reconstructed from the raw data if needed
         del data["signals"]
+        # Instead, we save the raw ADC values for both channels, which can be used for any future analysis or reconstruction of the signals
         data["raw_data"] = {"signal_A": valuesA, "signal_B": valuesB}
+        # We also implement a simple file management strategy to prevent the accumulation of too many files in the directory. We check the number of existing files and remove the oldest ones if we exceed a certain threshold (max_files). This way, we can ensure that we don't run out of storage space while still keeping a reasonable history of signal data for analysis.
+        dirname = "./app/__pycache__/signals/"
+        existing = sorted(os.listdir(dirname), key=lambda f: os.path.getctime(os.path.join(dirname, f)))
+        while len(existing) >= max_files:
+            os.remove(os.path.join(dirname, existing.pop(0)))
+        # We save the new signal data with a timestamp in the filename to ensure uniqueness and easy identification of when the data was collected. The timestamp format is "YYYYMMDD-HHMMSS", which allows for easy sorting and retrieval of files based on their creation time.    
         timestamp = strftime("%Y%m%d-%H%M%S")
-        filename = "./app/__pycache__/signals/signal_data_" + timestamp + ".json"
+        filename = dirname + "signal_data_" + timestamp + ".json"
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         with open(filename, "w") as f:
             json.dump(data, f)
