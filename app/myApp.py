@@ -200,8 +200,8 @@ def handle_request(c, req, b_sock, b_addr):
 class StreamingDevice:
     def __init__(
         self,
-        gather_values =2_000_000, # one second at 500ns interval
-        sample_interval = 500, # in nanoseconds
+        gather_values =100_000, #1_000_000, #2_000_000, # one second at 500ns interval
+        sample_interval =10000, #1000, # 500, # in nanoseconds
         potential_range=ps2000.PS2000_VOLTAGE_RANGE["PS2000_1V"]
     ):
         self.device = ps2000.open_unit()
